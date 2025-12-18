@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Language } from "@/types";
 import { candidateConfig } from "@/config/candidate.config";
 
@@ -12,13 +12,20 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() => {
+  const [language, setLanguageState] = useState<Language>(
+    candidateConfig.defaultLanguage
+  );
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("language");
-      return (saved as Language) || candidateConfig.defaultLanguage;
+      if (saved && (saved === "en" || saved === "te")) {
+        setLanguageState(saved as Language);
+      }
     }
-    return candidateConfig.defaultLanguage;
-  });
+  }, []);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);

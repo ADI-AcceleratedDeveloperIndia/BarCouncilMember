@@ -65,13 +65,19 @@ export default function SupportModal({
     enrollmentNumber: string;
     district: string;
     barAssociation: string;
+    customMessage: string;
   }) => {
     setSupportType("Detailed Support");
     setSupporterDetails({
       name: formData.name,
       enrollmentNumber: formData.enrollmentNumber,
     });
-    await onSupportSubmit("Detailed Support", formData);
+    await onSupportSubmit("Detailed Support", {
+      name: formData.name,
+      enrollmentNumber: formData.enrollmentNumber,
+      district: formData.district,
+      barAssociation: formData.barAssociation,
+    });
     const imageUrl = await generateSupportImage({
       candidateName: candidateConfig.name,
       candidatePhoto: candidateConfig.photo,
@@ -80,6 +86,7 @@ export default function SupportModal({
       enrollmentNumber: formData.enrollmentNumber,
       district: formData.district,
       barAssociation: formData.barAssociation,
+      customMessage: formData.customMessage,
     });
     setImageDataUrl(imageUrl);
     setStep("image");

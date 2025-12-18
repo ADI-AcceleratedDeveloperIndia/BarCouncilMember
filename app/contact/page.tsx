@@ -20,6 +20,7 @@ export default function Contact() {
       enrollmentNumber: string;
       district: string;
       barAssociation: string;
+      customMessage?: string;
     }
   ) => {
     try {

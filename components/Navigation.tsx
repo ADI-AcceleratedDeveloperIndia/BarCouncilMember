@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -7,6 +8,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 export default function Navigation() {
   const pathname = usePathname();
   const { language } = useLanguage();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const navItems = {
     en: {
@@ -23,7 +29,9 @@ export default function Navigation() {
     },
   };
 
-  const items = navItems[language];
+  // Use default language during SSR to prevent hydration mismatch
+  const currentLanguage = mounted ? language : "en";
+  const items = navItems[currentLanguage];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-40 bg-black border-b border-gold/20">

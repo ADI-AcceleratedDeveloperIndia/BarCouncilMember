@@ -25,6 +25,7 @@ export default function Home() {
       enrollmentNumber: string;
       district: string;
       barAssociation: string;
+      customMessage?: string;
     }
   ) => {
     try {

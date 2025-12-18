@@ -20,6 +20,7 @@ export default function Vision() {
       enrollmentNumber: string;
       district: string;
       barAssociation: string;
+      customMessage?: string;
     }
   ) => {
     try {
