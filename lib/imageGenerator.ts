@@ -108,11 +108,11 @@ export async function generateSupportImage(
   const designationY = nameY + 45;
   ctx.fillText(designationText, 400, designationY);
 
-  // Main support line (Big, Centered) with dash
+  // Main support line (Big, Centered)
   const supportText =
     language === "en"
-      ? "- I am supporting this candidate"
-      : "- నేను ఈ అభ్యర్థికి మద్దతుగా ఉన్నాను";
+      ? "I am supporting this candidate"
+      : "నేను ఈ అభ్యర్థికి మద్దతుగా ఉన్నాను";
   ctx.fillStyle = "#D4AF37";
   ctx.font = "bold 36px system-ui, -apple-system, sans-serif";
   const supportY = designationY + 60;
@@ -132,11 +132,11 @@ export async function generateSupportImage(
 
   // Supporter details (if provided)
   if (supporterName) {
-    // Supporter name (without Adv. prefix)
+    // Supporter name with dash before name (without Adv. prefix)
     const supporterNameText =
       language === "en"
-        ? `${supporterName}, Advocate`
-        : `${supporterName}, న్యాయవాది`;
+        ? `- ${supporterName}, Advocate`
+        : `- ${supporterName}, న్యాయవాది`;
     ctx.fillStyle = "#FFFFFF";
     ctx.font = "bold 24px system-ui, -apple-system, sans-serif";
     ctx.fillText(supporterNameText, 400, currentY);
