@@ -4,10 +4,24 @@ import { candidateConfig } from "@/config/candidate.config";
 
 // Initialize Google Sheets API
 async function getSheetsClient() {
+  let privateKey = process.env.GOOGLE_PRIVATE_KEY;
+
+  if (privateKey) {
+    // Remove quotes if present
+    if (
+      (privateKey.startsWith('"') && privateKey.endsWith('"')) ||
+      (privateKey.startsWith("'") && privateKey.endsWith("'"))
+    ) {
+      privateKey = privateKey.slice(1, -1);
+    }
+    // Replace literal \n with actual newlines
+    privateKey = privateKey.replace(/\\n/g, "\n");
+  }
+
   const auth = new google.auth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      private_key: privateKey,
     },
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
@@ -21,16 +35,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Check if Google Sheets is configured
-    const isSheetsConfigured =
+    const isSheetsConfigured = Boolean(
       process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
-      process.env.GOOGLE_PRIVATE_KEY &&
-      candidateConfig.googleSheetId !== "YOUR_GOOGLE_SHEET_ID";
+        process.env.GOOGLE_PRIVATE_KEY &&
+        candidateConfig.googleSheetId &&
+        candidateConfig.googleSheetId !== "YOUR_GOOGLE_SHEET_ID"
+    );
 
     if (!isSheetsConfigured) {
-      // Return success even without sheets (for testing/development)
-      // Data won't be logged, but user experience continues
       console.warn("Google Sheets not configured. Support logged but not saved.");
-      return NextResponse.json({ success: true, warning: "Sheets not configured" });
+      return NextResponse.json({
+        success: true,
+        warning: "Sheets not configured",
+      });
     }
 
     // Handle image download logging
@@ -55,6 +72,7 @@ export async function POST(request: NextRequest) {
             valueInputOption: "USER_ENTERED",
             requestBody: { values },
           });
+          console.log("Successfully logged anonymous download to Quick Support");
         } catch (error) {
           console.error("Error logging anonymous download to Quick Support:", error);
         }
@@ -86,6 +104,7 @@ export async function POST(request: NextRequest) {
           valueInputOption: "USER_ENTERED",
           requestBody: { values },
         });
+        console.log("Successfully logged to Followers sheet");
       } catch (error) {
         console.error("Error logging follower:", error);
       }
@@ -126,6 +145,7 @@ export async function POST(request: NextRequest) {
           valueInputOption: "USER_ENTERED",
           requestBody: { values },
         });
+        console.log("Successfully logged to Quick Support sheet");
       } else if (supportType === "Strong Support") {
         const values = [
           [
@@ -149,6 +169,7 @@ export async function POST(request: NextRequest) {
           valueInputOption: "USER_ENTERED",
           requestBody: { values },
         });
+        console.log("Successfully logged to Strong Support sheet");
       }
     } catch (error) {
       console.error("Error saving to Google Sheets:", error);
