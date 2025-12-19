@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
           const sheets = await getSheetsClient();
           const values = [
             [
-              new Date().toLocaleString("en-IN"),
+              new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
               "Quick Support",
               "No Details",
               "Image Generated",
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
         const sheets = await getSheetsClient();
         const values = [
           [
-            new Date().toLocaleString("en-IN"),
+            new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
             body.supportType,
             body.name || "Anonymous",
             body.enrollmentNumber || "N/A",
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
       if (supportType === "Quick Support") {
         const values = [
           [
-            new Date().toLocaleString("en-IN"),
+            new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
             supportType,
             detailsProvided === "Yes" ? "Details Added" : "No Details",
             "Image Generated",
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
       } else if (supportType === "Strong Support") {
         const values = [
           [
-            new Date().toLocaleString("en-IN"),
+            new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
             supportType,
             name || "",
             enrollmentNumber || "",
