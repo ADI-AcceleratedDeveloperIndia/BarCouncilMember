@@ -30,6 +30,16 @@ async function getSheetsClient() {
   return sheets;
 }
 
+export async function GET() {
+  return NextResponse.json({
+    emailSet: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    privateKeySet: !!process.env.GOOGLE_PRIVATE_KEY,
+    sheetIdSet: !!candidateConfig.googleSheetId,
+    sheetIdValid: candidateConfig.googleSheetId !== "YOUR_GOOGLE_SHEET_ID",
+    nodeEnv: process.env.NODE_ENV,
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -43,11 +53,17 @@ export async function POST(request: NextRequest) {
     );
 
     if (!isSheetsConfigured) {
-      console.warn("Google Sheets not configured. Support logged but not saved.");
-      return NextResponse.json({
-        success: true,
-        warning: "Sheets not configured",
-      });
+      const missing = [];
+      if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) missing.push("EMAIL");
+      if (!process.env.GOOGLE_PRIVATE_KEY) missing.push("PRIVATE_KEY");
+      if (!candidateConfig.googleSheetId || candidateConfig.googleSheetId === "YOUR_GOOGLE_SHEET_ID") missing.push("SHEET_ID");
+      
+      console.warn("Google Sheets not configured. Missing:", missing.join(", "));
+      return NextResponse.json({ 
+        success: false, 
+        error: "Sheets not configured", 
+        missing 
+      }, { status: 500 });
     }
 
     // Handle image download logging
@@ -73,13 +89,13 @@ export async function POST(request: NextRequest) {
             requestBody: { values },
           });
           console.log("Successfully logged anonymous download to Quick Support");
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error logging anonymous download to Quick Support:", error);
+          return NextResponse.json({ success: false, error: error.message }, { status: 500 });
         }
         return NextResponse.json({ success: true, message: "Anonymous download logged to Quick Support" });
       }
 
-      // If it IS a Strong Support, log it to Followers sheet
       try {
         const sheets = await getSheetsClient();
         const values = [
@@ -105,8 +121,9 @@ export async function POST(request: NextRequest) {
           requestBody: { values },
         });
         console.log("Successfully logged to Followers sheet");
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error logging follower:", error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
       }
 
       return NextResponse.json({ success: true });
@@ -171,14 +188,12 @@ export async function POST(request: NextRequest) {
         });
         console.log("Successfully logged to Strong Support sheet");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving to Google Sheets:", error);
-      // Return success to not break user experience
-      // Data just won't be logged
       return NextResponse.json({
-        success: true,
-        warning: "Support recorded but not saved to sheets",
-      });
+        success: false,
+        error: error.message || "Failed to save to Google Sheets",
+      }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
