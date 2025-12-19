@@ -57,9 +57,9 @@ Place candidate photo at `/public/candidate/photo.jpg`
 
 1. Create a Google Spreadsheet
 2. Create three sheets (tabs):
-   - **Quick Support**: Columns - Timestamp, Support Type, Details Provided, Image Generated, Image Downloaded
-   - **Strong Support**: Columns - Timestamp, Support Type, Name, Enrollment Number, District, Bar Association, Mobile Number, Language, Image Generated, Image Downloaded
-   - **Followers**: Columns - Timestamp, Support Type, Name, Enrollment Number, District, Bar Association, Mobile Number, Custom Message, Language, Status, Format
+   - **Quick Support**: Columns - Timestamp, Support Type, Details Provided, Image Generated, Image Downloaded (Logs anonymous interest and generic card downloads)
+   - **Strong Support**: Columns - Timestamp, Support Type, Name, Enrollment Number, District, Bar Association, Mobile Number, Custom Message, Language, Image Generated, Image Downloaded (Logs verified supporter details)
+   - **Followers**: Columns - Timestamp, Support Type, Name, Enrollment Number, District, Bar Association, Mobile Number, Custom Message, Language, Status, Format (Logs personalized card downloads by Strong Supporters)
 
 3. Create a Google Service Account:
    - Go to [Google Cloud Console](https://console.cloud.google.com/)

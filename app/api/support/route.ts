@@ -35,12 +35,39 @@ export async function POST(request: NextRequest) {
 
     // Handle image download logging
     if (body.action === "download") {
+      // If it's NOT a Strong Support (anonymous), log it to Quick Support sheet
+      if (body.supportType !== "Strong Support") {
+        try {
+          const sheets = await getSheetsClient();
+          const values = [
+            [
+              new Date().toLocaleString("en-IN"),
+              "Quick Support",
+              "No Details",
+              "Image Generated",
+              "Image Downloaded",
+            ],
+          ];
+
+          await sheets.spreadsheets.values.append({
+            spreadsheetId: candidateConfig.googleSheetId,
+            range: "Quick Support!A:E",
+            valueInputOption: "USER_ENTERED",
+            requestBody: { values },
+          });
+        } catch (error) {
+          console.error("Error logging anonymous download to Quick Support:", error);
+        }
+        return NextResponse.json({ success: true, message: "Anonymous download logged to Quick Support" });
+      }
+
+      // If it IS a Strong Support, log it to Followers sheet
       try {
         const sheets = await getSheetsClient();
         const values = [
           [
             new Date().toLocaleString("en-IN"),
-            body.supportType || "Quick Support",
+            body.supportType,
             body.name || "Anonymous",
             body.enrollmentNumber || "N/A",
             body.district || "N/A",
@@ -60,8 +87,7 @@ export async function POST(request: NextRequest) {
           requestBody: { values },
         });
       } catch (error) {
-        console.error("Error logging image download:", error);
-        // Continue even if logging fails
+        console.error("Error logging follower:", error);
       }
 
       return NextResponse.json({ success: true });
