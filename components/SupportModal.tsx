@@ -47,11 +47,14 @@ export default function SupportModal({
 
   const handleQuickSupport = async () => {
     setSupportType("Quick Support");
-    await onSupportSubmit("Quick Support");
+    // Removed immediate onSupportSubmit call
     setStep("add-details");
   };
 
   const handleSkip = async () => {
+    // Log Quick Support only when they actually skip details
+    await onSupportSubmit("Quick Support");
+    
     const imageUrl = await generateSupportImage({
       candidateName: candidateConfig.name,
       candidatePhoto: candidateConfig.photo,
