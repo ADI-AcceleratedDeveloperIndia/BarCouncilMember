@@ -11,6 +11,7 @@ interface SupportFormProps {
     enrollmentNumber: string;
     district: string;
     barAssociation: string;
+    mobileNumber: string;
     customMessage: string;
   }) => void;
   onCancel: () => void;
@@ -26,6 +27,7 @@ export default function SupportForm({
     enrollmentNumber: "",
     district: "",
     barAssociation: "",
+    mobileNumber: "",
     customMessage: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -132,6 +134,21 @@ export default function SupportForm({
 
       <div>
         <label className="block text-white mb-2">
+          {language === "en" ? "Mobile Number (Optional)" : "మొబైల్ సంఖ్య (ఐచ్ఛికం)"}
+        </label>
+        <input
+          type="tel"
+          value={formData.mobileNumber}
+          onChange={(e) =>
+            setFormData({ ...formData, mobileNumber: e.target.value })
+          }
+          className="w-full px-4 py-2 bg-black border-2 border-gold text-white rounded focus:outline-none focus:border-gold"
+          placeholder={language === "en" ? "Enter your mobile number..." : "మీ మొబైల్ సంఖ్యను నమోదు చేయండి..."}
+        />
+      </div>
+
+      <div>
+        <label className="block text-white mb-2">
           {language === "en"
             ? "Your Message (Optional)"
             : "మీ సందేశం (ఐచ్ఛికం)"}
@@ -159,7 +176,7 @@ export default function SupportForm({
       <div className="flex gap-4">
         <button
           type="submit"
-          className="flex-1 bg-gold text-black px-6 py-3 rounded font-semibold hover:bg-gold/90 transition"
+          className="flex-1 gold-shimmer text-black px-6 py-3 rounded font-bold transition-all gold-glow-hover"
         >
           {content.support.form.submit}
         </button>

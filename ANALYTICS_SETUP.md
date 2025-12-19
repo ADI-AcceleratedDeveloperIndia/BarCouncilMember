@@ -4,7 +4,7 @@ This guide explains how to set up premium-looking analytics for the Bar Council 
 
 ## Prerequisites
 
-- Google Spreadsheet with three sheets: "Quick Support", "Detailed Support", "Image Downloads"
+- Google Spreadsheet with three sheets: "Quick Support", "Strong Support", "Followers"
 - Google account with access to Looker Studio
 
 ## Step 1: Create Data Source
@@ -26,7 +26,7 @@ This guide explains how to set up premium-looking analytics for the Bar Council 
   - Image Generated → Text
   - Image Downloaded → Text
 
-### For "Detailed Support" Sheet
+### For "Strong Support" Sheet
 
 - Map columns:
   - Timestamp → Date & Time
@@ -35,17 +35,24 @@ This guide explains how to set up premium-looking analytics for the Bar Council 
   - Enrollment Number → Text
   - District → Text
   - Bar Association → Text
+  - Mobile Number → Text
   - Language → Text
   - Image Generated → Text
   - Image Downloaded → Text
 
-### For "Image Downloads" Sheet
+### For "Followers" Sheet
 
 - Map columns:
   - Timestamp → Date & Time
   - Support Type → Text
   - Name → Text
   - Enrollment Number → Text
+  - District → Text
+  - Bar Association → Text
+  - Mobile Number → Text
+  - Custom Message → Text
+  - Language → Text
+  - Status → Text
   - Format → Text
 
 ## Step 3: Create Dashboard
@@ -60,7 +67,7 @@ This guide explains how to set up premium-looking analytics for the Bar Council 
 
 1. Add **"Scorecard"** chart
 2. Data:
-   - Metric: `COUNT(Support Type)` from both Quick Support and Detailed Support sheets
+   - Metric: `COUNT(Support Type)` from both Quick Support and Strong Support sheets
    - Comparison: Previous period (optional)
 
 ### Quick Supports Count
@@ -69,31 +76,31 @@ This guide explains how to set up premium-looking analytics for the Bar Council 
 2. Data:
    - Metric: `COUNT(Support Type)` where Support Type = "Quick Support"
 
-### Detailed Supports Count
+### Strong Supports Count
 
 1. Add **"Scorecard"** chart
 2. Data:
-   - Metric: `COUNT(Support Type)` where Support Type = "Detailed Support"
+   - Metric: `COUNT(Support Type)` where Support Type = "Strong Support"
 
-### Total Image Downloads
+### Total Followers
 
 1. Add **"Scorecard"** chart
 2. Data:
-   - Metric: `COUNT(Timestamp)` from Image Downloads sheet
+   - Metric: `COUNT(Timestamp)` from Followers sheet
 
 ## Step 5: Create Charts
 
-### Pie Chart: Quick vs Detailed Support
+### Pie Chart: Quick vs Strong Support
 
 1. Add **"Pie Chart"**
 2. Dimension: `Support Type`
 3. Metric: `COUNT(Support Type)`
-4. Combine data from both Quick Support and Detailed Support sheets
+4. Combine data from both Quick Support and Strong Support sheets
 
 ### Bar Chart: District-wise Support
 
 1. Add **"Bar Chart"**
-2. Dimension: `District` (from Detailed Support sheet)
+2. Dimension: `District` (from Strong Support sheet)
 3. Metric: `COUNT(District)`
 4. Sort: Descending by count
 
@@ -111,7 +118,7 @@ This guide explains how to set up premium-looking analytics for the Bar Council 
 1. Add **"Scorecard"** chart
 2. Create calculated field:
    ```
-   (COUNT(Detailed Support) / (COUNT(Quick Support) + COUNT(Detailed Support))) * 100
+   (COUNT(Strong Support) / (COUNT(Quick Support) + COUNT(Strong Support))) * 100
    ```
 3. Format as percentage
 
@@ -120,7 +127,7 @@ This guide explains how to set up premium-looking analytics for the Bar Council 
 1. Add **"Scorecard"** chart
 2. Create calculated field:
    ```
-   (COUNT(Image Downloads) / (COUNT(Quick Support) + COUNT(Detailed Support))) * 100
+   (COUNT(Followers) / (COUNT(Quick Support) + COUNT(Strong Support))) * 100
    ```
 3. Format as percentage
 
@@ -170,13 +177,13 @@ This guide explains how to set up premium-looking analytics for the Bar Council 
 
 ```
 ┌─────────────────────────────────────────┐
-│  Total Supports    Quick    Detailed   │
+│  Total Supports    Quick    Strong     │
 │     1,234           456       778      │
 ├─────────────────────────────────────────┤
-│  Image Downloads   Conversion Rate      │
+│  Followers        Conversion Rate      │
 │      890             72%               │
 ├─────────────────────────────────────────┤
-│  [Pie Chart: Quick vs Detailed]         │
+│  [Pie Chart: Quick vs Strong]           │
 ├─────────────────────────────────────────┤
 │  [Bar Chart: District-wise Support]     │
 ├─────────────────────────────────────────┤

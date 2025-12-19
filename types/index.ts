@@ -2,13 +2,14 @@ export type Language = "en" | "te";
 
 export type LayoutVariant = "left" | "center" | "right";
 
-export type SupportType = "Quick Support" | "Detailed Support";
+export type SupportType = "Quick Support" | "Strong Support";
 
 export interface SupportFormData {
   name: string;
   enrollmentNumber: string;
   district: string;
   barAssociation: string;
+  mobileNumber?: string;
 }
 
 export interface SupportSubmission {
@@ -18,6 +19,7 @@ export interface SupportSubmission {
   enrollmentNumber?: string;
   district?: string;
   barAssociation?: string;
+  mobileNumber?: string;
   language: Language;
   imageGenerated: "Yes";
   imageDownloaded: "Yes" | "No";

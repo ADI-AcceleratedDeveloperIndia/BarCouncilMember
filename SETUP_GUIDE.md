@@ -79,23 +79,30 @@ Create three sheets with these exact names:
 - Column D: Image Generated
 - Column E: Image Downloaded
 
-**Sheet 2: "Detailed Support"**
+**Sheet 2: "Strong Support"**
 - Column A: Timestamp
 - Column B: Support Type
 - Column C: Name
 - Column D: Enrollment Number
 - Column E: District
 - Column F: Bar Association
-- Column G: Language
-- Column H: Image Generated
-- Column I: Image Downloaded
+- Column G: Mobile Number
+- Column H: Language
+- Column I: Image Generated
+- Column J: Image Downloaded
 
-**Sheet 3: "Image Downloads"**
+**Sheet 3: "Followers"**
 - Column A: Timestamp
 - Column B: Support Type
 - Column C: Name
 - Column D: Enrollment Number
-- Column E: Format
+- Column E: District
+- Column F: Bar Association
+- Column G: Mobile Number
+- Column H: Custom Message
+- Column I: Language
+- Column J: Status
+- Column K: Format
 
 **Tip:** Add headers in row 1 for clarity, but the API will work without them.
 
@@ -171,7 +178,7 @@ Visit `http://localhost:3000` and test:
 - [ ] Language toggle works
 - [ ] Support button appears
 - [ ] Quick support flow works
-- [ ] Detailed support form works
+- [ ] Strong support form works
 - [ ] Support card image generates
 - [ ] Image downloads work
 - [ ] WhatsApp share works
@@ -198,7 +205,7 @@ Visit `http://localhost:3000` and test:
 - Verify service account email has access to sheet
 - Check Sheet ID is correct in config
 - Verify environment variables are set correctly
-- Check sheet names match exactly: "Quick Support", "Detailed Support", "Image Downloads"
+- Check sheet names match exactly: "Quick Support", "Strong Support", "Followers"
 
 ### Image Generation Fails
 - Check browser console for errors

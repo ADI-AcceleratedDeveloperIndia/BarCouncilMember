@@ -25,6 +25,7 @@ export default function Home() {
       enrollmentNumber: string;
       district: string;
       barAssociation: string;
+      mobileNumber: string;
       customMessage?: string;
     }
   ) => {
@@ -42,6 +43,8 @@ export default function Home() {
         payload.enrollmentNumber = formData.enrollmentNumber;
         payload.district = formData.district;
         payload.barAssociation = formData.barAssociation;
+        payload.mobileNumber = formData.mobileNumber;
+        payload.customMessage = formData.customMessage;
       }
 
       await fetch("/api/support", {

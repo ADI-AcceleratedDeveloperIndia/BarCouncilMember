@@ -8,7 +8,7 @@ A production-ready, white-label election campaign website product for Telangana 
 - **Config-Based Customization**: Change candidate details via config file
 - **Three Layout Variants**: Center, Left, Right layouts
 - **Bilingual Support**: English and Telugu with instant toggle
-- **Dual Support Flow**: Quick Support (one-click) and Detailed Support (form)
+- **Dual Support Flow**: Quick Support (one-click) and Strong Support (form)
 - **Client-Side Image Generation**: Zero-cost support card generation
 - **Google Sheets Integration**: Automatic data logging
 - **Social Sharing**: WhatsApp share functionality
@@ -58,8 +58,8 @@ Place candidate photo at `/public/candidate/photo.jpg`
 1. Create a Google Spreadsheet
 2. Create three sheets (tabs):
    - **Quick Support**: Columns - Timestamp, Support Type, Details Provided, Image Generated, Image Downloaded
-   - **Detailed Support**: Columns - Timestamp, Support Type, Name, Enrollment Number, District, Bar Association, Language, Image Generated, Image Downloaded
-   - **Image Downloads**: Columns - Timestamp, Support Type, Name, Enrollment Number, Format
+   - **Strong Support**: Columns - Timestamp, Support Type, Name, Enrollment Number, District, Bar Association, Mobile Number, Language, Image Generated, Image Downloaded
+   - **Followers**: Columns - Timestamp, Support Type, Name, Enrollment Number, District, Bar Association, Mobile Number, Custom Message, Language, Status, Format
 
 3. Create a Google Service Account:
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
@@ -116,7 +116,7 @@ npm start
 4. Connect to your Google Spreadsheet
 5. Create dashboard with:
    - Total Supports metric
-   - Quick vs Detailed Support pie chart
+   - Quick vs Strong Support pie chart
    - District-wise bar chart
    - Time-series line chart
    - Conversion metrics

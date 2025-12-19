@@ -17,7 +17,7 @@ export default function SupportButton({
   return (
     <button
       onClick={onClick}
-      className="fixed bottom-24 right-6 z-50 bg-gold text-black px-6 py-3 rounded font-semibold text-lg shadow-lg hover:bg-gold/90 transition border-2 border-gold"
+      className="fixed bottom-24 right-6 z-50 gold-shimmer text-black px-6 py-3 rounded font-bold text-lg shadow-lg gold-glow-hover transition-all duration-300 border-2 border-white/20"
     >
       {content.support.button}
     </button>

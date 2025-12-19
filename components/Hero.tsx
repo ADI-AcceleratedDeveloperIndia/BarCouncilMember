@@ -38,7 +38,7 @@ export default function Hero({
           }`}
         >
           <div
-            className={`relative w-48 h-48 md:w-64 md:h-64 rounded-full border-4 border-gold overflow-hidden bg-white/10 ${
+            className={`relative w-48 h-48 md:w-64 md:h-64 rounded-full border-4 border-gold overflow-hidden bg-white/10 gold-glow ${
               isCenter ? "mx-auto" : ""
             }`}
           >
@@ -61,11 +61,11 @@ export default function Hero({
               : "text-right"
           }`}
         >
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 gold-text-shimmer">
             {candidateConfig.name}
           </h1>
           <div
-            className={`h-1 w-32 bg-gold mb-4 ${
+            className={`h-1.5 w-48 gold-shimmer mb-6 ${
               isCenter
                 ? "mx-auto"
                 : isLeft

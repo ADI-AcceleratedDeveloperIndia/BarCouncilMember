@@ -20,7 +20,8 @@ export default function Vision() {
       enrollmentNumber: string;
       district: string;
       barAssociation: string;
-      customMessage?: string;
+      mobileNumber: string;
+      customMessage: string;
     }
   ) => {
     try {
@@ -37,6 +38,8 @@ export default function Vision() {
         payload.enrollmentNumber = formData.enrollmentNumber;
         payload.district = formData.district;
         payload.barAssociation = formData.barAssociation;
+        payload.mobileNumber = formData.mobileNumber;
+        payload.customMessage = formData.customMessage;
       }
 
       await fetch("/api/support", {
@@ -90,7 +93,7 @@ export default function Vision() {
       <section className="pt-32 pb-16 px-4 bg-black">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className="text-3xl md:text-5xl font-bold text-white mb-8 border-b-2 border-gold inline-block pb-4">
+            <h1 className="text-3xl md:text-5xl font-bold mb-8 border-b-2 border-gold inline-block pb-4 gold-text-shimmer">
               {currentContent.heading}
             </h1>
           </div>

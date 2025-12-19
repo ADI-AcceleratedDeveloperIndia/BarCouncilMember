@@ -8,6 +8,7 @@ interface GenerateImageParams {
   enrollmentNumber?: string;
   district?: string;
   barAssociation?: string;
+  mobileNumber?: string;
   customMessage?: string;
 }
 
@@ -25,7 +26,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-// Helper function to wrap text with character limit per line
+// Helper function to wrap text and return the new Y position
 function wrapText(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -33,46 +34,34 @@ function wrapText(
   y: number,
   maxWidth: number,
   lineHeight: number,
-  maxCharsPerLine?: number
+  draw: boolean = true
 ): number {
+  const words = text.split(" ");
+  let line = "";
   let currentY = y;
-  
-  if (maxCharsPerLine) {
-    // Split by character limit
-    const chars = text.split("");
-    let line = "";
-    
-    for (let i = 0; i < chars.length; i++) {
-      line += chars[i];
-      
-      if (line.length >= maxCharsPerLine || i === chars.length - 1) {
-        ctx.fillText(line.trim(), x, currentY);
-        line = "";
-        currentY += lineHeight;
-      }
-    }
-  } else {
-    // Original word-based wrapping
-    const words = text.split(" ");
-    let line = "";
 
-    for (let n = 0; n < words.length; n++) {
-      const testLine = line + words[n] + " ";
-      const metrics = ctx.measureText(testLine);
-      const testWidth = metrics.width;
+  for (let n = 0; n < words.length; n++) {
+    const word = words[n];
+    const testLine = line + (line ? " " : "") + word;
+    const metrics = ctx.measureText(testLine);
+    const testWidth = metrics.width;
 
-      if (testWidth > maxWidth && n > 0) {
-        ctx.fillText(line, x, currentY);
-        line = words[n] + " ";
-        currentY += lineHeight;
-      } else {
-        line = testLine;
-      }
-    }
-    if (line) {
-      ctx.fillText(line, x, currentY);
+    if (testWidth > maxWidth && line !== "") {
+      // Current line is full, draw it and start a new line with current word
+      if (draw) ctx.fillText(line, x, currentY);
+      line = word;
       currentY += lineHeight;
+      
+      // If the single word itself is still too wide, we might need to force a wrap
+      // but for 100 chars max, a single word won't likely exceed 1080px.
+    } else {
+      line = testLine;
     }
+  }
+  
+  if (line) {
+    if (draw) ctx.fillText(line, x, currentY);
+    currentY += lineHeight;
   }
   
   return currentY;
@@ -89,186 +78,170 @@ export async function generateSupportImage(
     enrollmentNumber,
     district,
     barAssociation,
+    mobileNumber,
     customMessage,
   } = params;
 
-  // Convert relative path to absolute URL
   const photoUrl = candidatePhoto.startsWith("http")
     ? candidatePhoto
     : `${window.location.origin}${candidatePhoto}`;
 
-  // Pre-load the image first
   const loadedImg = await loadImage(photoUrl);
 
-  // Create canvas - 1080x1920 for WhatsApp/Instagram/Facebook Stories (9:16 ratio)
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
   canvas.height = 1920;
   const ctx = canvas.getContext("2d");
 
-  if (!ctx) {
-    throw new Error("Could not get canvas context");
+  if (!ctx) throw new Error("Could not get canvas context");
+
+  // Configuration
+  const padding = 120; // Increased padding for safer margins
+  const contentWidth = canvas.width - padding * 2;
+  const photoSize = 450;
+  
+  // Calculate Total Height first to center vertically
+  let totalHeight = 0;
+  
+  // Photo + spacing
+  totalHeight += photoSize + 60;
+  
+  // Candidate Name
+  ctx.font = "bold 80px system-ui, -apple-system, sans-serif";
+  totalHeight += 100; // Rough estimate for name
+  
+  // Designation
+  ctx.font = "32px system-ui, -apple-system, sans-serif";
+  const designationText = language === "en" 
+    ? "Candidate for Member – Telangana State Bar Council" 
+    : "తెలంగాణ రాష్ట్ర బార్ కౌన్సిల్ ఎన్నికల్లో పోటీ చేస్తున్న న్యాయవాది";
+  let tempY = wrapText(ctx, designationText, 0, 0, contentWidth, 45, false);
+  totalHeight += tempY + 60;
+
+  // Support lines
+  totalHeight += 100; // "I am supporting..."
+  totalHeight += 80;  // "You also please..."
+  totalHeight += 100; // Spacing
+  
+  // Custom Message
+  if (customMessage?.trim()) {
+    ctx.font = "italic 34px system-ui, -apple-system, sans-serif";
+    tempY = wrapText(ctx, customMessage.trim().substring(0, 100), 0, 0, contentWidth, 45, false);
+    totalHeight += tempY + 60;
+  }
+  
+  // Supporter Details
+  if (supporterName) {
+    totalHeight += 120; // Name + spacing
+    if (enrollmentNumber) totalHeight += 45;
+    if (district) totalHeight += 45;
+    if (barAssociation) totalHeight += 45;
+    if (mobileNumber) totalHeight += 45;
   }
 
-  // Draw black background
-  ctx.fillStyle = "#000000";
+  // Draw background
+  const bgGradient = ctx.createLinearGradient(0, 0, 0, 1920);
+  bgGradient.addColorStop(0, "#000000");
+  bgGradient.addColorStop(0.5, "#0a0a0a");
+  bgGradient.addColorStop(1, "#000000");
+  ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, 1080, 1920);
 
-  // Draw gold border
+  // Borders
   ctx.strokeStyle = "#D4AF37";
-  ctx.lineWidth = 10;
-  ctx.strokeRect(5, 5, 1070, 1910);
+  ctx.lineWidth = 15;
+  ctx.strokeRect(20, 20, 1040, 1880);
+  ctx.lineWidth = 2;
+  ctx.strokeRect(45, 45, 990, 1830);
 
-  // Draw candidate photo (circular) - optimized size
-  const photoSize = 220;
-  const photoX = (1080 - photoSize) / 2;
-  const photoY = 60;
+  // Start Drawing
+  let currentY = (canvas.height - totalHeight) / 2;
+  if (currentY < 100) currentY = 100; // Minimum top margin
 
-  // Draw circular clipping path
+  // Photo
+  const photoX = (canvas.width - photoSize) / 2;
   ctx.save();
   ctx.beginPath();
-  ctx.arc(
-    photoX + photoSize / 2,
-    photoY + photoSize / 2,
-    photoSize / 2 - 4,
-    0,
-    Math.PI * 2
-  );
+  ctx.arc(photoX + photoSize / 2, currentY + photoSize / 2, photoSize / 2 - 5, 0, Math.PI * 2);
   ctx.clip();
-
-  // Draw gold border circle
-  ctx.strokeStyle = "#D4AF37";
-  ctx.lineWidth = 8;
-  ctx.stroke();
-
-  // Draw the image
-  ctx.drawImage(loadedImg, photoX, photoY, photoSize, photoSize);
+  ctx.drawImage(loadedImg, photoX, currentY, photoSize, photoSize);
   ctx.restore();
+  
+  ctx.strokeStyle = "#D4AF37";
+  ctx.lineWidth = 10;
+  ctx.beginPath();
+  ctx.arc(photoX + photoSize / 2, currentY + photoSize / 2, photoSize / 2, 0, Math.PI * 2);
+  ctx.stroke();
+  
+  currentY += photoSize + 80;
 
-  // Candidate name
+  // Candidate Name
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = "bold 36px system-ui, -apple-system, sans-serif";
+  ctx.font = "bold 80px system-ui, -apple-system, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  const nameY = photoY + photoSize + 25;
-  ctx.fillText(candidateName, 540, nameY);
+  ctx.fillText(candidateName, 540, currentY);
+  currentY += 100;
 
-  // Candidate designation
-  const designationText =
-    language === "en"
-      ? "Candidate for Member – Telangana State Bar Council"
-      : "తెలంగాణ రాష్ట్ర బార్ కౌన్సిల్ ఎన్నికల్లో పోటీ చేస్తున్న న్యాయవాది";
-  ctx.fillStyle = "#FFFFFF";
-  ctx.font = "20px system-ui, -apple-system, sans-serif";
-  const designationY = nameY + 45;
-  const maxDesignationWidth = 1000;
-  let currentY = wrapText(
-    ctx,
-    designationText,
-    540,
-    designationY,
-    maxDesignationWidth,
-    28
-  );
+  // Designation
+  ctx.font = "32px system-ui, -apple-system, sans-serif";
+  currentY = wrapText(ctx, designationText, 540, currentY, contentWidth, 45, true);
+  currentY += 80;
 
-  // Main support line (Big, Centered)
-  const supportText =
-    language === "en"
-      ? "I am supporting this candidate"
-      : "నేను ఈ అభ్యర్థికి మద్దతుగా ఉన్నాను";
+  // Support Message
+  const supportText = language === "en" ? "I am supporting this candidate" : "నేను ఈ అభ్యర్థికి మద్దతుగా ఉన్నాను";
   ctx.fillStyle = "#D4AF37";
-  ctx.font = "bold 40px system-ui, -apple-system, sans-serif";
-  currentY += 35;
+  ctx.font = "bold 60px system-ui, -apple-system, sans-serif";
   ctx.fillText(supportText, 540, currentY);
+  currentY += 85;
 
-  // "You also please support" line
-  const pleaseSupportText =
-    language === "en"
-      ? "You also please support"
-      : "మీరు కూడా మద్దతు ఇవ్వండి";
-  ctx.fillStyle = "#D4AF37";
-  ctx.font = "bold 30px system-ui, -apple-system, sans-serif";
-  currentY += 55;
+  const pleaseSupportText = language === "en" ? "You also please support" : "మీరు కూడా మద్దతు ఇవ్వండి";
+  ctx.font = "bold 50px system-ui, -apple-system, sans-serif";
   ctx.fillText(pleaseSupportText, 540, currentY);
+  currentY += 120;
 
-  currentY += 40;
-
-  // Custom message (if provided) - limited characters per line
-  if (customMessage && customMessage.trim()) {
-    const trimmedMessage = customMessage.trim().substring(0, 100);
-    ctx.fillStyle = "#D4AF37";
-    ctx.font = "bold 26px system-ui, -apple-system, sans-serif";
-    // Limit to 35 characters per line for better fit
-    const maxCharsPerLine = 35;
-    currentY = wrapText(
-      ctx,
-      trimmedMessage,
-      540,
-      currentY,
-      1000,
-      32,
-      maxCharsPerLine
-    );
-    currentY += 25;
+  // Custom Message
+  if (customMessage?.trim()) {
+    ctx.font = "italic 34px system-ui, -apple-system, sans-serif";
+    currentY = wrapText(ctx, customMessage.trim().substring(0, 100), 540, currentY, contentWidth, 45, true);
+    currentY += 50;
   }
 
-  // Supporter details (if provided)
+  // Supporter Details
   if (supporterName) {
-    // Supporter name with dash before name (without Adv. prefix)
-    const supporterNameText =
-      language === "en"
-        ? `- ${supporterName}, Advocate`
-        : `- ${supporterName}, న్యాయవాది`;
+    const supporterNameText = language === "en" ? `- ${supporterName}, Advocate` : `- ${supporterName}, న్యాయవాది`;
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 26px system-ui, -apple-system, sans-serif";
+    ctx.font = "bold 40px system-ui, -apple-system, sans-serif";
     ctx.fillText(supporterNameText, 540, currentY);
-    currentY += 35;
+    currentY += 60;
 
+    ctx.font = "30px system-ui, -apple-system, sans-serif";
     if (enrollmentNumber) {
-      const enrollmentText =
-        language === "en"
-          ? `Enrollment No: ${enrollmentNumber}`
-          : `ఎన్‌రోల్మెంట్ నం: ${enrollmentNumber}`;
-      ctx.fillStyle = "#FFFFFF";
-      ctx.font = "22px system-ui, -apple-system, sans-serif";
+      const enrollmentText = language === "en" ? `Enrollment No: ${enrollmentNumber}` : `ఎన్‌రోల్మెంట్ నం: ${enrollmentNumber}`;
       ctx.fillText(enrollmentText, 540, currentY);
-      currentY += 32;
+      currentY += 40;
     }
-
     if (district) {
-      const districtText =
-        language === "en" ? `District: ${district}` : `జిల్లా: ${district}`;
-      ctx.fillStyle = "#FFFFFF";
-      ctx.font = "22px system-ui, -apple-system, sans-serif";
+      const districtText = language === "en" ? `District: ${district}` : `జిల్లా: ${district}`;
       ctx.fillText(districtText, 540, currentY);
-      currentY += 32;
+      currentY += 40;
     }
-
     if (barAssociation) {
-      const barText =
-        language === "en"
-          ? `Bar Association: ${barAssociation}`
-          : `బార్ అసోసియేషన్: ${barAssociation}`;
-      ctx.fillStyle = "#FFFFFF";
-      ctx.font = "22px system-ui, -apple-system, sans-serif";
-      ctx.fillText(barText, 540, currentY);
-      currentY += 35;
+      const barText = language === "en" ? `Bar Association: ${barAssociation}` : `బార్ అసోసియేషన్: ${barAssociation}`;
+      currentY = wrapText(ctx, barText, 540, currentY, contentWidth, 38, true);
+    }
+    if (mobileNumber) {
+      const mobileText = language === "en" ? `Mobile: ${mobileNumber}` : `మొబైల్: ${mobileNumber}`;
+      ctx.fillText(mobileText, 540, currentY);
+      currentY += 40;
     }
   }
 
-  // Calculate remaining space and position footer
-  // Ensure footer is always near bottom but content doesn't overflow
-  const footerY = Math.max(currentY + 50, 1870);
-  
-  // Footer line (subtle, at bottom)
-  const footerText =
-    language === "en"
-      ? "Telangana State Bar Council Elections"
-      : "తెలంగాణ రాష్ట్ర బార్ కౌన్సిల్ ఎన్నికలు";
+  // Footer
+  const footerText = language === "en" ? "Telangana State Bar Council Elections" : "తెలంగాణ రాష్ట్ర బార్ కౌన్సిల్ ఎన్నికలు";
   ctx.fillStyle = "#D4AF37";
-  ctx.font = "18px system-ui, -apple-system, sans-serif";
-  ctx.fillText(footerText, 540, footerY);
+  ctx.font = "bold 28px system-ui, -apple-system, sans-serif";
+  ctx.fillText(footerText, 540, 1840);
 
-  // Convert canvas to PNG
   return canvas.toDataURL("image/png", 1.0);
 }

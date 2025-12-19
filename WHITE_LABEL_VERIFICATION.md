@@ -62,7 +62,7 @@ The website has **THREE layout variants** fully implemented:
 1. Set up Google Sheets (see SETUP_GUIDE.md)
 2. Add test candidate photo
 3. Test Quick Support flow
-4. Test Detailed Support flow
+4. Test Strong Support flow
 5. Verify data appears in sheets
 6. Test image download
 7. Once verified, save as master template
@@ -90,7 +90,7 @@ The website has **THREE layout variants** fully implemented:
 
 ### Functional Testing (Requires Google Sheets)
 - [ ] Quick Support button works
-- [ ] Detailed Support form works
+- [ ] Strong Support form works
 - [ ] Support card image generates
 - [ ] Image downloads (PNG/JPEG)
 - [ ] WhatsApp share works

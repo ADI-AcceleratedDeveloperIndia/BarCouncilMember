@@ -38,22 +38,22 @@ export default function Experience({
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-          <div className="border-2 border-gold p-6 bg-black">
-            <h3 className="text-xl font-semibold text-gold mb-2">
+          <div className="border-2 gold-border-glow p-6 bg-black rounded-lg transition-all duration-300 hover:scale-[1.02]">
+            <h3 className="text-xl font-bold gold-text-shimmer mb-2">
               {content.experience.years}
             </h3>
             <p className="text-white text-lg">—</p>
           </div>
 
-          <div className="border-2 border-gold p-6 bg-black">
-            <h3 className="text-xl font-semibold text-gold mb-2">
+          <div className="border-2 gold-border-glow p-6 bg-black rounded-lg transition-all duration-300 hover:scale-[1.02]">
+            <h3 className="text-xl font-bold gold-text-shimmer mb-2">
               {content.experience.courts}
             </h3>
             <p className="text-white text-lg">—</p>
           </div>
 
-          <div className="border-2 border-gold p-6 bg-black">
-            <h3 className="text-xl font-semibold text-gold mb-2">
+          <div className="border-2 gold-border-glow p-6 bg-black rounded-lg transition-all duration-300 hover:scale-[1.02]">
+            <h3 className="text-xl font-bold gold-text-shimmer mb-2">
               {content.experience.service}
             </h3>
             <p className="text-white text-lg">—</p>

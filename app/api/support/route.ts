@@ -39,17 +39,23 @@ export async function POST(request: NextRequest) {
         const sheets = await getSheetsClient();
         const values = [
           [
-            new Date().toISOString(),
-            body.supportType || "Unknown",
-            body.name || "",
-            body.enrollmentNumber || "",
-            body.format || "",
+            new Date().toLocaleString("en-IN"),
+            body.supportType || "Quick Support",
+            body.name || "Anonymous",
+            body.enrollmentNumber || "N/A",
+            body.district || "N/A",
+            body.barAssociation || "N/A",
+            body.mobileNumber || "N/A",
+            body.customMessage || "N/A",
+            body.language === "te" ? "Telugu" : "English",
+            "Image Downloaded",
+            body.format || "PNG",
           ],
         ];
 
         await sheets.spreadsheets.values.append({
           spreadsheetId: candidateConfig.googleSheetId,
-          range: "Image Downloads!A:E",
+          range: "Followers!A:K",
           valueInputOption: "USER_ENTERED",
           requestBody: { values },
         });
@@ -69,6 +75,8 @@ export async function POST(request: NextRequest) {
       enrollmentNumber,
       district,
       barAssociation,
+      mobileNumber,
+      customMessage,
       language,
     } = body;
 
@@ -78,11 +86,11 @@ export async function POST(request: NextRequest) {
       if (supportType === "Quick Support") {
         const values = [
           [
-            new Date().toISOString(),
+            new Date().toLocaleString("en-IN"),
             supportType,
-            detailsProvided,
-            "Yes", // Image Generated
-            "No", // Image Downloaded (will be updated on download)
+            detailsProvided === "Yes" ? "Details Added" : "No Details",
+            "Image Generated",
+            "Not Downloaded Yet",
           ],
         ];
 
@@ -92,24 +100,26 @@ export async function POST(request: NextRequest) {
           valueInputOption: "USER_ENTERED",
           requestBody: { values },
         });
-      } else if (supportType === "Detailed Support") {
+      } else if (supportType === "Strong Support") {
         const values = [
           [
-            new Date().toISOString(),
+            new Date().toLocaleString("en-IN"),
             supportType,
-            name,
-            enrollmentNumber,
-            district,
+            name || "",
+            enrollmentNumber || "",
+            district || "",
             barAssociation || "",
-            language,
-            "Yes", // Image Generated
-            "No", // Image Downloaded
+            mobileNumber || "",
+            customMessage || "",
+            language === "te" ? "Telugu" : "English",
+            "Image Generated",
+            "Not Downloaded Yet",
           ],
         ];
 
         await sheets.spreadsheets.values.append({
           spreadsheetId: candidateConfig.googleSheetId,
-          range: "Detailed Support!A:I",
+          range: "Strong Support!A:K",
           valueInputOption: "USER_ENTERED",
           requestBody: { values },
         });

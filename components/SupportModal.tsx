@@ -18,6 +18,8 @@ interface SupportModalProps {
       enrollmentNumber: string;
       district: string;
       barAssociation: string;
+      mobileNumber: string;
+      customMessage: string;
     }
   ) => Promise<void>;
 }
@@ -36,6 +38,10 @@ export default function SupportModal({
   const [supporterDetails, setSupporterDetails] = useState<{
     name?: string;
     enrollmentNumber?: string;
+    district?: string;
+    barAssociation?: string;
+    mobileNumber?: string;
+    customMessage?: string;
   }>({});
   const content = getContent(language);
 
@@ -65,18 +71,25 @@ export default function SupportModal({
     enrollmentNumber: string;
     district: string;
     barAssociation: string;
+    mobileNumber: string;
     customMessage: string;
   }) => {
-    setSupportType("Detailed Support");
+    setSupportType("Strong Support");
     setSupporterDetails({
-      name: formData.name,
-      enrollmentNumber: formData.enrollmentNumber,
-    });
-    await onSupportSubmit("Detailed Support", {
       name: formData.name,
       enrollmentNumber: formData.enrollmentNumber,
       district: formData.district,
       barAssociation: formData.barAssociation,
+      mobileNumber: formData.mobileNumber,
+      customMessage: formData.customMessage,
+    });
+    await onSupportSubmit("Strong Support", {
+      name: formData.name,
+      enrollmentNumber: formData.enrollmentNumber,
+      district: formData.district,
+      barAssociation: formData.barAssociation,
+      mobileNumber: formData.mobileNumber,
+      customMessage: formData.customMessage,
     });
     const imageUrl = await generateSupportImage({
       candidateName: candidateConfig.name,
@@ -86,6 +99,7 @@ export default function SupportModal({
       enrollmentNumber: formData.enrollmentNumber,
       district: formData.district,
       barAssociation: formData.barAssociation,
+      mobileNumber: formData.mobileNumber,
       customMessage: formData.customMessage,
     });
     setImageDataUrl(imageUrl);
@@ -111,8 +125,12 @@ export default function SupportModal({
         body: JSON.stringify({
           action: "download",
           supportType,
-          name: supporterDetails.name || "",
-          enrollmentNumber: supporterDetails.enrollmentNumber || "",
+          name: supporterDetails.name || "Anonymous",
+          enrollmentNumber: supporterDetails.enrollmentNumber || "N/A",
+          district: supporterDetails.district || "N/A",
+          barAssociation: supporterDetails.barAssociation || "N/A",
+          mobileNumber: supporterDetails.mobileNumber || "N/A",
+          customMessage: supporterDetails.customMessage || "N/A",
           format: "png",
           language,
         }),
@@ -136,12 +154,37 @@ export default function SupportModal({
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-8">
                 {content.support.quickSupport.title}
               </h2>
-              <button
-                onClick={handleQuickSupport}
-                className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gold text-black text-4xl md:text-5xl font-bold hover:bg-gold/90 transition mb-8"
-              >
-                ✓
-              </button>
+              <div className="flex items-center justify-center gap-4">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      onChange={(e) => {
+                        if (e.target.checked) handleQuickSupport();
+                      }}
+                      className="peer sr-only"
+                    />
+                    <div className="w-12 h-12 bg-black border-2 border-gold rounded peer-checked:gold-shimmer transition-all flex items-center justify-center gold-glow">
+                      <svg
+                        className="w-8 h-8 text-black scale-0 peer-checked:scale-100 transition-transform"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={4}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                  <span className="text-white text-xl md:text-2xl font-semibold group-hover:text-gold transition">
+                    {language === "en" ? "I Support" : "నేను మద్దతు ఇస్తున్నాను"}
+                  </span>
+                </label>
+              </div>
             </div>
           )}
 
@@ -152,16 +195,16 @@ export default function SupportModal({
                   ? "Would you like to add your details?"
                   : "మీ వివరాలను జోడించాలనుకుంటున్నారా?"}
               </h2>
-              <div className="flex flex-col gap-4 max-w-md mx-auto">
+              <div className="flex flex-col gap-6 max-w-md mx-auto items-center">
                 <button
                   onClick={handleAddDetails}
-                  className="bg-gold text-black px-6 py-3 rounded font-semibold hover:bg-gold/90 transition"
+                  className="w-full gold-shimmer text-black px-6 py-4 rounded-lg font-bold text-xl transition-all gold-glow-hover"
                 >
                   {content.support.quickSupport.addDetails}
                 </button>
                 <button
                   onClick={handleSkip}
-                  className="border-2 border-gold text-white px-6 py-3 rounded font-semibold hover:bg-gold/10 transition"
+                  className="text-white/60 hover:text-gold underline underline-offset-4 transition text-lg"
                 >
                   {content.support.quickSupport.skip}
                 </button>
@@ -194,7 +237,7 @@ export default function SupportModal({
               <div className="flex justify-center">
                 <button
                   onClick={handleDownload}
-                  className="bg-gold text-black px-8 py-3 rounded font-semibold hover:bg-gold/90 transition text-lg"
+                  className="gold-shimmer text-black px-8 py-3 rounded font-bold transition-all text-lg gold-glow-hover"
                 >
                   {language === "en" ? "Download PNG" : "PNG డౌన్‌లోడ్ చేయండి"}
                 </button>
