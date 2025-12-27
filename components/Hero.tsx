@@ -46,6 +46,7 @@ export default function Hero({
               src={candidateConfig.photo}
               alt="Advocate Photo"
               fill
+              sizes="(max-width: 768px) 192px, 256px"
               className="object-cover"
               priority
             />

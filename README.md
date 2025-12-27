@@ -9,8 +9,10 @@ A production-ready, white-label election campaign website product for Telangana 
 - **Three Layout Variants**: Center, Left, Right layouts
 - **Bilingual Support**: English and Telugu with instant toggle
 - **Dual Support Flow**: Quick Support (one-click) and Strong Support (form)
+- **Preferential Vote System**: Modal-based voting with 1-24 preference options
 - **Client-Side Image Generation**: Zero-cost support card generation
-- **Google Sheets Integration**: Automatic data logging
+- **Google Sheets Integration**: Automatic data logging for support and votes
+- **WhatsApp Bulk Sender**: Admin tool for sending campaign links to multiple contacts
 - **Social Sharing**: WhatsApp share functionality
 - **Premium Design**: Black, White, Gold color scheme
 
@@ -56,10 +58,11 @@ Place candidate photo at `/public/candidate/photo.jpg`
 ### 4. Google Sheets Setup
 
 1. Create a Google Spreadsheet
-2. Create three sheets (tabs):
+2. Create four sheets (tabs):
    - **Quick Support**: Columns - Timestamp, Support Type, Details Provided, Image Generated, Image Downloaded (Logs anonymous interest and generic card downloads)
    - **Strong Support**: Columns - Timestamp, Support Type, Name, Enrollment Number, District, Bar Association, Mobile Number, Custom Message, Language, Image Generated, Image Downloaded (Logs verified supporter details)
    - **Followers**: Columns - Timestamp, Support Type, Name, Enrollment Number, District, Bar Association, Mobile Number, Custom Message, Language, Status, Format (Logs personalized card downloads by Strong Supporters)
+   - **Preferential Votes**: Columns - Timestamp, Preferential Order (Logs preferential votes from advocates)
 
 3. Create a Google Service Account:
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
@@ -137,6 +140,24 @@ npm start
 5. If "Add Details" → Form appears
 6. Support card image generated
 7. User can download PNG/JPEG or share on WhatsApp
+
+## Preferential Vote Flow
+
+1. User visits website with `?vote=true` parameter (sent via WhatsApp link)
+2. Preferential Vote modal appears automatically
+3. User selects preferential order (1-24)
+4. User clicks Submit
+5. Vote is logged to Google Sheets
+6. Modal closes and home page is displayed
+
+## WhatsApp Bulk Sending
+
+1. Visit `/admin/whatsapp` page
+2. Upload CSV file with contacts or enter phone numbers manually
+3. Customize the message
+4. Copy or download WhatsApp links
+5. Use automation tools or WhatsApp Business API for bulk sending
+6. Links will open WhatsApp with pre-filled message containing `?vote=true` parameter
 
 ## License
 
