@@ -148,8 +148,6 @@ export default function Home() {
         <PreferentialVoteModal
           language={language}
           onClose={() => {
-            // Mark as seen when closed (even without submitting)
-            localStorage.setItem("preferentialVoteSubmitted", "seen");
             setShowPreferentialModal(false);
           }}
           onVoteSubmit={handlePreferentialVoteSubmit}
