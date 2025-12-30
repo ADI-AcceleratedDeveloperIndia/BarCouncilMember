@@ -22,18 +22,59 @@ export default function Home() {
 
   // Check if modal should be shown on mount
   useEffect(() => {
+    // Dev helper: Expose function to clear localStorage for testing
+    if (typeof window !== "undefined") {
+      (window as any).clearPreferentialVoteStorage = () => {
+        localStorage.removeItem("preferentialVoteSubmitted");
+        console.log("✅ Preferential vote storage cleared! Refresh the page to see the modal again.");
+      };
+      console.log("💡 Dev Helper: Run clearPreferentialVoteStorage() in console to reset and test the modal again");
+    }
+    
+    // Check URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const voteParam = urlParams.get("vote");
+    const clearParam = urlParams.get("clear");
+    
+    // If ?clear=true, clear localStorage and reload
+    if (clearParam === "true") {
+      localStorage.removeItem("preferentialVoteSubmitted");
+      console.log("✅ Cleared preferential vote storage via URL parameter");
+      // Remove the clear parameter and reload
+      urlParams.delete("clear");
+      const newUrl = window.location.pathname + (urlParams.toString() ? "?" + urlParams.toString() : "");
+      window.history.replaceState({}, "", newUrl);
+      // Reload to show modal
+      window.location.reload();
+      return;
+    }
+    
     // Check if user has already seen/submitted the modal
     const hasSeenModal = localStorage.getItem("preferentialVoteSubmitted");
     
-    // Check URL parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const voteParam = urlParams.get("vote");
+    console.log("🔍 Modal Check:", {
+      hasSeenModal,
+      voteParam,
+      shouldShow: voteParam === "true" || (!hasSeenModal && voteParam !== "false")
+    });
     
     // Show modal if:
-    // 1. URL has ?vote=true parameter (for WhatsApp links - always show), OR
+    // 1. URL has ?vote=true parameter (for WhatsApp links - always show, even if voted before), OR
     // 2. User hasn't seen it before (first visit) and no explicit ?vote=false
     if (voteParam === "true" || (!hasSeenModal && voteParam !== "false")) {
+      console.log("✅ Showing preferential vote modal");
       setShowPreferentialModal(true);
+      
+      // Track that modal was opened
+      fetch("/api/preferential-vote-track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "opened" }),
+      }).catch((error) => {
+        console.error("Error tracking modal open:", error);
+      });
+    } else {
+      console.log("❌ Not showing modal - user has already seen/voted");
     }
   }, []);
 
@@ -149,6 +190,18 @@ export default function Home() {
           language={language}
           onClose={() => {
             setShowPreferentialModal(false);
+            // Track that modal was closed without voting
+            // Only track if user hasn't voted (localStorage check)
+            const hasVoted = localStorage.getItem("preferentialVoteSubmitted") === "voted";
+            if (!hasVoted) {
+              fetch("/api/preferential-vote-track", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "closed_without_vote" }),
+              }).catch((error) => {
+                console.error("Error tracking modal close:", error);
+              });
+            }
           }}
           onVoteSubmit={handlePreferentialVoteSubmit}
         />
