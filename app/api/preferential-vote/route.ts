@@ -199,6 +199,67 @@ export async function POST(request: NextRequest) {
       });
 
       console.log(`Successfully logged preferential vote: Order ${preferentialOrder}`);
+
+      // Also log "Voted" to Preferential Vote Tracking sheet
+      try {
+        // Check if tracking sheet exists, create if not (reuse logic from tracking route)
+        const spreadsheet = await sheets.spreadsheets.get({
+          spreadsheetId: candidateConfig.googleSheetId,
+        });
+
+        const sheetTitles = spreadsheet.data.sheets?.map((sheet) => sheet.properties?.title) || [];
+        const exactSheetName = "Preferential Vote Tracking";
+        let trackingSheetExists = sheetTitles.includes(exactSheetName);
+
+        if (!trackingSheetExists) {
+          // Create tracking sheet
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: candidateConfig.googleSheetId,
+            requestBody: {
+              requests: [
+                {
+                  addSheet: {
+                    properties: {
+                      title: exactSheetName,
+                    },
+                  },
+                },
+              ],
+            },
+          });
+          
+          // Add headers
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: candidateConfig.googleSheetId,
+            range: `${exactSheetName}!A1:B1`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: {
+              values: [["Timestamp", "Action"]],
+            },
+          });
+          trackingSheetExists = true;
+        }
+
+        // Log "Voted" action
+        const trackingValues = [
+          [
+            new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+            "Voted",
+          ],
+        ];
+
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: candidateConfig.googleSheetId,
+          range: `${exactSheetName}!A:B`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: trackingValues },
+        });
+
+        console.log(`Successfully logged vote to tracking sheet`);
+      } catch (trackingError: any) {
+        // Don't fail the vote if tracking fails
+        console.error("Error logging to tracking sheet (non-critical):", trackingError);
+      }
     } catch (error: any) {
       console.error("Error saving preferential vote to Google Sheets:", error);
       return NextResponse.json({
