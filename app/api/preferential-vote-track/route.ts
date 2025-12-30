@@ -61,43 +61,92 @@ export async function POST(request: NextRequest) {
     try {
       const sheets = await getSheetsClient();
 
-      // Check if "Preferential Vote Tracking" sheet exists, create if not
-      try {
-        await sheets.spreadsheets.values.get({
-          spreadsheetId: candidateConfig.googleSheetId,
-          range: "Preferential Vote Tracking!A1:B1",
-        });
-      } catch (checkError: any) {
-        // Sheet doesn't exist, create it
-        if (checkError.message?.includes("Unable to parse range") || checkError.code === 400) {
-          console.log("Creating 'Preferential Vote Tracking' sheet...");
+      // First, get all sheets to check for existing or conflicted sheets
+      const spreadsheet = await sheets.spreadsheets.get({
+        spreadsheetId: candidateConfig.googleSheetId,
+      });
+
+      const sheetTitles = spreadsheet.data.sheets?.map((sheet) => sheet.properties?.title) || [];
+      const exactSheetName = "Preferential Vote Tracking";
+      const conflictedSheet = sheetTitles.find((title) => 
+        title?.includes("Preferential Vote Tracking") && title !== exactSheetName
+      );
+
+      // Check if exact sheet exists
+      let sheetExists = sheetTitles.includes(exactSheetName);
+      let sheetNameToUse = exactSheetName;
+
+      // If conflicted sheet exists, delete it (regardless of whether exact sheet exists)
+      if (conflictedSheet) {
+        console.log(`Found conflicted sheet: ${conflictedSheet}, deleting it...`);
+        const conflictedSheetId = spreadsheet.data.sheets?.find(
+          (s) => s.properties?.title === conflictedSheet
+        )?.properties?.sheetId;
+
+        if (conflictedSheetId !== undefined) {
           await sheets.spreadsheets.batchUpdate({
             spreadsheetId: candidateConfig.googleSheetId,
             requestBody: {
               requests: [
                 {
-                  addSheet: {
-                    properties: {
-                      title: "Preferential Vote Tracking",
-                    },
+                  deleteSheet: {
+                    sheetId: conflictedSheetId,
                   },
                 },
               ],
             },
           });
-          
-          // Add headers
-          await sheets.spreadsheets.values.update({
+          console.log(`Deleted conflicted sheet: ${conflictedSheet}`);
+          // Refresh sheet list after deletion
+          const updatedSpreadsheet = await sheets.spreadsheets.get({
             spreadsheetId: candidateConfig.googleSheetId,
-            range: "Preferential Vote Tracking!A1:B1",
-            valueInputOption: "USER_ENTERED",
-            requestBody: {
-              values: [["Timestamp", "Action"]],
-            },
           });
-          console.log("Created 'Preferential Vote Tracking' sheet with headers");
-        } else {
-          throw checkError;
+          const updatedSheetTitles = updatedSpreadsheet.data.sheets?.map((sheet) => sheet.properties?.title) || [];
+          sheetExists = updatedSheetTitles.includes(exactSheetName);
+        }
+      }
+
+      // Check if sheet exists, create if not
+      if (!sheetExists) {
+        try {
+          await sheets.spreadsheets.values.get({
+            spreadsheetId: candidateConfig.googleSheetId,
+            range: `${exactSheetName}!A1:B1`,
+          });
+          sheetExists = true;
+        } catch (checkError: any) {
+          // Sheet doesn't exist, create it
+          if (checkError.message?.includes("Unable to parse range") || checkError.code === 400) {
+            console.log("Creating 'Preferential Vote Tracking' sheet...");
+            await sheets.spreadsheets.batchUpdate({
+              spreadsheetId: candidateConfig.googleSheetId,
+              requestBody: {
+                requests: [
+                  {
+                    addSheet: {
+                      properties: {
+                        title: exactSheetName,
+                      },
+                    },
+                  },
+                ],
+              },
+            });
+            
+            // Add headers
+            await sheets.spreadsheets.values.update({
+              spreadsheetId: candidateConfig.googleSheetId,
+              range: `${exactSheetName}!A1:B1`,
+              valueInputOption: "USER_ENTERED",
+              requestBody: {
+                values: [["Timestamp", "Action"]],
+              },
+            });
+            console.log("Created 'Preferential Vote Tracking' sheet with headers");
+            sheetExists = true;
+          } else {
+            throw checkError;
+          }
         }
       }
 
@@ -111,12 +160,12 @@ export async function POST(request: NextRequest) {
 
       await sheets.spreadsheets.values.append({
         spreadsheetId: candidateConfig.googleSheetId,
-        range: "Preferential Vote Tracking!A:B",
+        range: `${sheetNameToUse}!A:B`,
         valueInputOption: "USER_ENTERED",
         requestBody: { values },
       });
 
-      console.log(`Successfully logged preferential vote tracking: ${action}`);
+      console.log(`Successfully logged preferential vote tracking: ${action} to sheet: ${sheetNameToUse}`);
     } catch (error: any) {
       console.error("Error saving tracking to Google Sheets:", error);
       return NextResponse.json({
