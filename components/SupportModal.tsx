@@ -35,6 +35,7 @@ export default function SupportModal({
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [imageDownloaded, setImageDownloaded] = useState(false);
   const [supportType, setSupportType] = useState<SupportType>("Quick Support");
+  const [formSubmitted, setFormSubmitted] = useState(false); // Track if Strong Support form was submitted
   const [supporterDetails, setSupporterDetails] = useState<{
     name?: string;
     enrollmentNumber?: string;
@@ -44,6 +45,33 @@ export default function SupportModal({
     customMessage?: string;
   }>({});
   const content = getContent(language);
+
+  // Handle modal close - check if Strong Support form was submitted but image not downloaded
+  const handleClose = async () => {
+    // If Strong Support form was submitted but image not downloaded, log to Strong Support sheet
+    if (formSubmitted && supportType === "Strong Support" && !imageDownloaded) {
+      try {
+        await fetch("/api/support", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "close_without_download",
+            supportType: "Strong Support",
+            name: supporterDetails.name || "",
+            enrollmentNumber: supporterDetails.enrollmentNumber || "",
+            district: supporterDetails.district || "",
+            barAssociation: supporterDetails.barAssociation || "",
+            mobileNumber: supporterDetails.mobileNumber || "",
+            customMessage: supporterDetails.customMessage || "",
+            language,
+          }),
+        });
+      } catch (error) {
+        console.error("Error logging close without download:", error);
+      }
+    }
+    onClose();
+  };
 
   const handleQuickSupport = async () => {
     setSupportType("Quick Support");
@@ -78,6 +106,7 @@ export default function SupportModal({
     customMessage: string;
   }) => {
     setSupportType("Strong Support");
+    setFormSubmitted(true); // Mark that form was submitted
     setSupporterDetails({
       name: formData.name,
       enrollmentNumber: formData.enrollmentNumber,
@@ -86,14 +115,7 @@ export default function SupportModal({
       mobileNumber: formData.mobileNumber,
       customMessage: formData.customMessage,
     });
-    await onSupportSubmit("Strong Support", {
-      name: formData.name,
-      enrollmentNumber: formData.enrollmentNumber,
-      district: formData.district,
-      barAssociation: formData.barAssociation,
-      mobileNumber: formData.mobileNumber,
-      customMessage: formData.customMessage,
-    });
+    // Don't call onSupportSubmit here - will log when they download or close
     const imageUrl = await generateSupportImage({
       candidateName: candidateConfig.name,
       candidatePhoto: candidateConfig.photo,
@@ -146,7 +168,7 @@ export default function SupportModal({
       <div className="bg-black border-2 border-gold rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="absolute top-4 right-4 text-white hover:text-gold text-2xl"
           >
             ×

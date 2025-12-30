@@ -32,25 +32,27 @@ Your spreadsheet has **6 different sheets (tabs)** that automatically collect di
 - Mobile Number (if provided)
 - Custom Message (if provided)
 - Language (English/Telugu)
-- Image status
+- Image Generated status
+- Image Downloaded status
 
 **What it means:**
 - These are people who **filled out the complete form** with their details
-- They are your committed supporters who took the time to provide information
-- **Use this to see:** Your verified supporter list with contact details
+- **BUT did NOT download** their personalized support card
+- They provided information but didn't download the image
+- **Use this to see:** Supporters who gave details but didn't download the card
 
 ---
 
 ### 3. **Followers** Sheet
 **What it collects:**
 - All the same information as "Strong Support" sheet
-- Plus: Image format and download status
+- Plus: Image format
 
 **What it means:**
 - These are people who:
-  1. Filled out the form (Strong Supporters)
+  1. Filled out the form with their details
   2. **AND** downloaded their personalized support card
-- They are your most engaged supporters
+- They are your most engaged supporters who actively downloaded and likely shared
 - **Use this to see:** Who is actively sharing your support on social media
 
 ---

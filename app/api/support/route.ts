@@ -109,6 +109,7 @@ export async function POST(request: NextRequest) {
             body.mobileNumber || "N/A",
             body.customMessage || "N/A",
             body.language === "te" ? "Telugu" : "English",
+            "Image Generated",
             "Image Downloaded",
             body.format || "PNG",
           ],
@@ -116,17 +117,51 @@ export async function POST(request: NextRequest) {
 
         await sheets.spreadsheets.values.append({
           spreadsheetId: candidateConfig.googleSheetId,
-          range: "Followers!A:K",
+          range: "Followers!A:L",
           valueInputOption: "USER_ENTERED",
           requestBody: { values },
         });
-        console.log("Successfully logged to Followers sheet");
+        console.log("Successfully logged to Followers sheet (details + downloaded)");
       } catch (error: any) {
         console.error("Error logging follower:", error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
       }
 
       return NextResponse.json({ success: true });
+    }
+
+    // Handle modal close without download (for Strong Supporters who didn't download)
+    if (body.action === "close_without_download" && body.supportType === "Strong Support") {
+      try {
+        const sheets = await getSheetsClient();
+        const values = [
+          [
+            new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+            body.supportType,
+            body.name || "",
+            body.enrollmentNumber || "",
+            body.district || "",
+            body.barAssociation || "",
+            body.mobileNumber || "",
+            body.customMessage || "",
+            body.language === "te" ? "Telugu" : "English",
+            "Image Generated",
+            "Not Downloaded",
+          ],
+        ];
+
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: candidateConfig.googleSheetId,
+          range: "Strong Support!A:K",
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values },
+        });
+        console.log("Successfully logged to Strong Support sheet (details but no download)");
+        return NextResponse.json({ success: true });
+      } catch (error: any) {
+        console.error("Error logging to Strong Support:", error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
     }
 
     // Handle support submissions
@@ -164,29 +199,9 @@ export async function POST(request: NextRequest) {
         });
         console.log("Successfully logged to Quick Support sheet");
       } else if (supportType === "Strong Support") {
-        const values = [
-          [
-            new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
-            supportType,
-            name || "",
-            enrollmentNumber || "",
-            district || "",
-            barAssociation || "",
-            mobileNumber || "",
-            customMessage || "",
-            language === "te" ? "Telugu" : "English",
-            "Image Generated",
-            "Not Downloaded Yet",
-          ],
-        ];
-
-        await sheets.spreadsheets.values.append({
-          spreadsheetId: candidateConfig.googleSheetId,
-          range: "Strong Support!A:K",
-          valueInputOption: "USER_ENTERED",
-          requestBody: { values },
-        });
-        console.log("Successfully logged to Strong Support sheet");
+        // Don't log to Strong Support yet - wait to see if they download
+        // Will be logged when modal closes without download
+        console.log("Strong Support form submitted - waiting for download or close");
       }
     } catch (error: any) {
       console.error("Error saving to Google Sheets:", error);
