@@ -271,7 +271,8 @@ export async function POST(request: NextRequest) {
                       },
                     },
                   ],
-                });
+                },
+              });
               
               // Add headers
               await sheets.spreadsheets.values.update({
