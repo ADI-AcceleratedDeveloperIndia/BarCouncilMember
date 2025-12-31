@@ -101,6 +101,32 @@ export default function PreferentialVoteModal({
 
         {/* Content */}
         <div className="text-center pt-6 sm:pt-8 md:pt-10">
+          {/* Advocate Name and Photo Section */}
+          <div className="flex items-center justify-between mb-3 sm:mb-4 md:mb-5 px-2 sm:px-3 md:px-4 border-b border-gold pb-2 sm:pb-3">
+            <div className="flex-1 text-left pr-2 sm:pr-3">
+              <p className="text-[10px] sm:text-xs md:text-sm text-gray-400 mb-1">
+                {modalLanguage === "en" ? "Advocate Name" : "న్యాయవాది పేరు"}
+              </p>
+              <h3 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gold break-words leading-tight">
+                {candidateConfig.name}
+              </h3>
+            </div>
+            <div className="flex-shrink-0">
+              <img
+                src="/candidate/modelPhoto.png"
+                alt={candidateConfig.name}
+                className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full border-2 border-gold object-cover"
+              />
+            </div>
+          </div>
+
+          {/* Contesting Statement */}
+          <p className="text-gold text-[11px] sm:text-xs md:text-sm lg:text-base mb-3 sm:mb-4 md:mb-5 px-1 sm:px-2 font-semibold italic leading-snug sm:leading-relaxed">
+            {modalLanguage === "en"
+              ? "I am contesting for Telangana Bar Council Member Elections."
+              : "నేను తెలంగాణ బార్ కౌన్సిల్ సభ్యుడి ఎన్నికలకు పోటీ చేస్తున్నాను."}
+          </p>
+
           <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gold mb-2 sm:mb-3 md:mb-4 gold-text-shimmer px-1 sm:px-2 leading-tight">
             {modalLanguage === "en"
               ? "Submit Your Preferential Choice (Mock Process)"
