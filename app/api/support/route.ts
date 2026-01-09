@@ -30,6 +30,44 @@ async function getSheetsClient() {
   return sheets;
 }
 
+// Retry function with exponential backoff for Google Sheets API calls
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 5,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if it's a rate limit error (429) or quota exceeded (403)
+      const isRateLimit = 
+        error.code === 429 || 
+        error.code === 403 ||
+        error.message?.includes("rate limit") ||
+        error.message?.includes("quota exceeded") ||
+        error.message?.includes("RESOURCE_EXHAUSTED");
+      
+      if (isRateLimit && attempt < maxRetries - 1) {
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`Rate limit hit, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      // If not a rate limit error, or we've exhausted retries, throw
+      throw error;
+    }
+  }
+  
+  throw lastError;
+}
+
 export async function GET() {
   return NextResponse.json({
     emailSet: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -82,11 +120,13 @@ export async function POST(request: NextRequest) {
             ],
           ];
 
-          await sheets.spreadsheets.values.append({
-            spreadsheetId: candidateConfig.googleSheetId,
-            range: "Quick Support!A:E",
-            valueInputOption: "USER_ENTERED",
-            requestBody: { values },
+          await retryWithBackoff(async () => {
+            await sheets.spreadsheets.values.append({
+              spreadsheetId: candidateConfig.googleSheetId,
+              range: "Quick Support!A:E",
+              valueInputOption: "USER_ENTERED",
+              requestBody: { values },
+            });
           });
           console.log("Successfully logged anonymous download to Quick Support");
         } catch (error: any) {
@@ -115,11 +155,13 @@ export async function POST(request: NextRequest) {
           ],
         ];
 
-        await sheets.spreadsheets.values.append({
-          spreadsheetId: candidateConfig.googleSheetId,
-          range: "Followers!A:L",
-          valueInputOption: "USER_ENTERED",
-          requestBody: { values },
+        await retryWithBackoff(async () => {
+          await sheets.spreadsheets.values.append({
+            spreadsheetId: candidateConfig.googleSheetId,
+            range: "Followers!A:L",
+            valueInputOption: "USER_ENTERED",
+            requestBody: { values },
+          });
         });
         console.log("Successfully logged to Followers sheet (details + downloaded)");
       } catch (error: any) {
@@ -150,11 +192,13 @@ export async function POST(request: NextRequest) {
           ],
         ];
 
-        await sheets.spreadsheets.values.append({
-          spreadsheetId: candidateConfig.googleSheetId,
-          range: "Strong Support!A:K",
-          valueInputOption: "USER_ENTERED",
-          requestBody: { values },
+        await retryWithBackoff(async () => {
+          await sheets.spreadsheets.values.append({
+            spreadsheetId: candidateConfig.googleSheetId,
+            range: "Strong Support!A:K",
+            valueInputOption: "USER_ENTERED",
+            requestBody: { values },
+          });
         });
         console.log("Successfully logged to Strong Support sheet (details but no download)");
         return NextResponse.json({ success: true });
@@ -191,11 +235,13 @@ export async function POST(request: NextRequest) {
           ],
         ];
 
-        await sheets.spreadsheets.values.append({
-          spreadsheetId: candidateConfig.googleSheetId,
-          range: "Quick Support!A:E",
-          valueInputOption: "USER_ENTERED",
-          requestBody: { values },
+        await retryWithBackoff(async () => {
+          await sheets.spreadsheets.values.append({
+            spreadsheetId: candidateConfig.googleSheetId,
+            range: "Quick Support!A:E",
+            valueInputOption: "USER_ENTERED",
+            requestBody: { values },
+          });
         });
         console.log("Successfully logged to Quick Support sheet");
       } else if (supportType === "Strong Support") {

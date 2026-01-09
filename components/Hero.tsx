@@ -62,6 +62,20 @@ export default function Hero({
               : "text-right"
           }`}
         >
+          {/* Serial Number - BIG and Prominent */}
+          {candidateConfig.serialNumber && (
+            <div className={`mb-6 ${isCenter ? "text-center" : ""}`}>
+              <p className="text-sm md:text-base text-gold mb-2 font-semibold">
+                {language === "en" ? "Serial Number" : "సీరియల్ నంబర్"}
+              </p>
+              <div className={`inline-block ${isCenter ? "mx-auto" : ""}`}>
+                <span className="text-7xl md:text-9xl lg:text-[12rem] font-bold text-gold gold-text-shimmer gold-glow">
+                  {candidateConfig.serialNumber}
+                </span>
+              </div>
+            </div>
+          )}
+          
           <h1 className="text-4xl md:text-6xl font-bold mb-4 gold-text-shimmer">
             {candidateConfig.name}
           </h1>

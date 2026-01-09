@@ -131,9 +131,15 @@ export default function Home() {
         // Close modal
         setShowPreferentialModal(false);
       } else {
-        throw new Error("Failed to submit vote");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || "Failed to submit vote";
+        // Check if it's a rate limit error
+        const isRateLimit = response.status === 429 || response.status === 403 || 
+                           errorMessage.includes("rate limit") || 
+                           errorMessage.includes("quota");
+        throw new Error(isRateLimit ? "rate limit" : errorMessage);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting preferential vote:", error);
       throw error;
     }

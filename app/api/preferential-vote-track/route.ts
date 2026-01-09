@@ -30,6 +30,44 @@ async function getSheetsClient() {
   return sheets;
 }
 
+// Retry function with exponential backoff for Google Sheets API calls
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 5,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if it's a rate limit error (429) or quota exceeded (403)
+      const isRateLimit = 
+        error.code === 429 || 
+        error.code === 403 ||
+        error.message?.includes("rate limit") ||
+        error.message?.includes("quota exceeded") ||
+        error.message?.includes("RESOURCE_EXHAUSTED");
+      
+      if (isRateLimit && attempt < maxRetries - 1) {
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`Rate limit hit, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      // If not a rate limit error, or we've exhausted retries, throw
+      throw error;
+    }
+  }
+  
+  throw lastError;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -158,11 +196,13 @@ export async function POST(request: NextRequest) {
         ],
       ];
 
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: candidateConfig.googleSheetId,
-        range: `${sheetNameToUse}!A:B`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values },
+      await retryWithBackoff(async () => {
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: candidateConfig.googleSheetId,
+          range: `${sheetNameToUse}!A:B`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values },
+        });
       });
 
       console.log(`Successfully logged preferential vote tracking: ${action} to sheet: ${sheetNameToUse}`);

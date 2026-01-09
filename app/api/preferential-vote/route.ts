@@ -30,6 +30,44 @@ async function getSheetsClient() {
   return sheets;
 }
 
+// Retry function with exponential backoff for Google Sheets API calls
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 5,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if it's a rate limit error (429) or quota exceeded (403)
+      const isRateLimit = 
+        error.code === 429 || 
+        error.code === 403 ||
+        error.message?.includes("rate limit") ||
+        error.message?.includes("quota exceeded") ||
+        error.message?.includes("RESOURCE_EXHAUSTED");
+      
+      if (isRateLimit && attempt < maxRetries - 1) {
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`Rate limit hit, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      // If not a rate limit error, or we've exhausted retries, throw
+      throw error;
+    }
+  }
+  
+  throw lastError;
+}
+
 // Setup summary sheet with formulas
 async function setupSummarySheet(sheets: any) {
   try {
@@ -191,11 +229,14 @@ export async function POST(request: NextRequest) {
         ],
       ];
 
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: candidateConfig.googleSheetId,
-        range: "Preferential Votes!A:B",
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values },
+      // Use retry logic for rate limit handling
+      await retryWithBackoff(async () => {
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: candidateConfig.googleSheetId,
+          range: "Preferential Votes!A:B",
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values },
+        });
       });
 
       console.log(`Successfully logged preferential vote: Order ${preferentialOrder}`);
@@ -299,11 +340,14 @@ export async function POST(request: NextRequest) {
           ],
         ];
 
-        await sheets.spreadsheets.values.append({
-          spreadsheetId: candidateConfig.googleSheetId,
-          range: `${sheetNameToUse}!A:B`,
-          valueInputOption: "USER_ENTERED",
-          requestBody: { values: trackingValues },
+        // Use retry logic for rate limit handling
+        await retryWithBackoff(async () => {
+          await sheets.spreadsheets.values.append({
+            spreadsheetId: candidateConfig.googleSheetId,
+            range: `${sheetNameToUse}!A:B`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: { values: trackingValues },
+          });
         });
 
         console.log(`✅ Successfully logged "Voted" to Preferential Vote Tracking sheet`);

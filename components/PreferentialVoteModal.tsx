@@ -39,6 +39,7 @@ export default function PreferentialVoteModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hoveredOrder, setHoveredOrder] = useState<number | null>(null);
   const [displayedText, setDisplayedText] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
 
   // Typing animation effect
   useEffect(() => {
@@ -67,11 +68,22 @@ export default function PreferentialVoteModal({
     if (selectedOrder === null) return;
     
     setIsSubmitting(true);
+    setError(null);
     try {
       await onVoteSubmit(selectedOrder);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting vote:", error);
+      // Show user-friendly error message
+      if (error.message?.includes("rate limit") || error.message?.includes("quota") || error.message?.includes("429") || error.message?.includes("403")) {
+        setError(modalLanguage === "en" 
+          ? "Server is busy. Please try again in a few seconds. Your vote will be saved automatically."
+          : "సర్వర్ బిజీగా ఉంది. కొన్ని సెకన్లలో మళ్లీ ప్రయత్నించండి. మీ ఓటు స్వయంచాలకంగా సేవ్ అవుతుంది.");
+      } else {
+        setError(modalLanguage === "en"
+          ? "Failed to submit. Please try again."
+          : "సమర్పించడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -101,6 +113,20 @@ export default function PreferentialVoteModal({
 
         {/* Content */}
         <div className="text-center pt-8 sm:pt-10 md:pt-12 flex-1 flex flex-col overflow-hidden">
+          {/* Serial Number - BIG and Prominent in Middle */}
+          {candidateConfig.serialNumber && (
+            <div className="mb-2 sm:mb-3 md:mb-4">
+              <p className="text-[10px] sm:text-xs md:text-sm text-gold mb-1 sm:mb-1.5 font-semibold">
+                {modalLanguage === "en" ? "Serial Number" : "సీరియల్ నంబర్"}
+              </p>
+              <div className="flex justify-center">
+                <span className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-gold gold-text-shimmer gold-glow">
+                  {candidateConfig.serialNumber}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Name of the Contestant and Photo Section - Smaller */}
           <div className="flex items-center justify-between mb-1.5 sm:mb-2 md:mb-2.5 px-3 sm:px-4 md:px-5 border-b border-gold pb-1 sm:pb-1.5">
             <div className="flex-1 text-left pr-2 sm:pr-3">
@@ -181,6 +207,15 @@ export default function PreferentialVoteModal({
               ))}
             </div>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-1 sm:mb-1.5 md:mb-2 px-1 sm:px-1.5">
+              <p className="text-red-400 text-[9px] sm:text-[10px] md:text-xs bg-red-900/30 border border-red-500 rounded px-2 py-1 leading-tight">
+                {error}
+              </p>
+            </div>
+          )}
 
           {/* Submit Button - Smaller and compact */}
           <button
