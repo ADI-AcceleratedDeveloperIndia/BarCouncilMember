@@ -12,10 +12,10 @@ export const candidateConfig = {
     te: "తెలంగాణ రాష్ట్ర బార్ కౌన్సిల్ ఎన్నికల్లో ఈ అభ్యర్థికి నా మద్దతు ఉంది.\nవివరాలకు ఈ లింక్ చూడండి: ",
   },
   // Firebase Cloud Messaging (FCM) Configuration
-  // Set these values after running: node scripts/setup-firebase.js <client-name>
+  // Environment variables in Vercel will override these values
   firebaseConfig: {
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "", // Will be set by setup script
-    vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || "", // Will be set by setup script
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "bar-council-8a238",
+    vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || "BGTvsS1SepQ9sAMLRKQJDdI_VhD1JUUoRWjjAtsxT4QDDGWeOn9jtxsZzBcbYwO1aRSh-9i1oI7Ovk50MWQ6Rd8",
   },
 };
 
