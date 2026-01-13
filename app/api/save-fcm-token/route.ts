@@ -18,6 +18,8 @@ async function ensureSheetExists() {
   const sheetName = "Push Notification Subscribers";
 
   try {
+    console.log(`📊 Checking if sheet "${sheetName}" exists...`);
+    
     // Check if sheet exists
     const spreadsheet = await sheets.spreadsheets.get({
       spreadsheetId,
@@ -28,8 +30,10 @@ async function ensureSheetExists() {
     );
 
     if (!sheetExists) {
+      console.log(`📝 Sheet "${sheetName}" not found, creating...`);
+      
       // Create the sheet
-      await sheets.spreadsheets.batchUpdate({
+      const createResponse = await sheets.spreadsheets.batchUpdate({
         spreadsheetId,
         requestBody: {
           requests: [
@@ -44,18 +48,40 @@ async function ensureSheetExists() {
         },
       });
 
+      console.log(`✅ Sheet "${sheetName}" created successfully`);
+
+      // Wait a moment for sheet to be ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       // Add headers
-      await sheets.spreadsheets.values.append({
+      await sheets.spreadsheets.values.update({
         spreadsheetId,
-        range: `${sheetName}!A1`,
+        range: `${sheetName}!A1:C1`,
         valueInputOption: "RAW",
         requestBody: {
           values: [["Timestamp", "FCM Token", "Status"]],
         },
       });
+
+      console.log(`✅ Headers added to "${sheetName}"`);
+    } else {
+      console.log(`✅ Sheet "${sheetName}" already exists`);
     }
-  } catch (error) {
-    console.error("Error ensuring sheet exists:", error);
+  } catch (error: any) {
+    console.error("❌ Error ensuring sheet exists:", error);
+    console.error("Error details:", {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+    });
+    
+    // If it's a permissions error, provide helpful message
+    if (error.code === 403 || error.message?.includes("permission")) {
+      throw new Error(
+        `Permission denied. Please share the Google Sheet with the service account email: ${process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "your-service-account@...iam.gserviceaccount.com"} with Editor access.`
+      );
+    }
+    
     throw error;
   }
 }
