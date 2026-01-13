@@ -11,6 +11,7 @@ import Vision from "@/components/Vision";
 import SupportButton from "@/components/SupportButton";
 import SupportModal from "@/components/SupportModal";
 import PreferentialVoteModal from "@/components/PreferentialVoteModal";
+import CalendarModal from "@/components/CalendarModal";
 import LanguageToggle from "@/components/LanguageToggle";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -18,17 +19,20 @@ import { useLanguage } from "@/contexts/LanguageContext";
 export default function Home() {
   const { language } = useLanguage();
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [showPreferentialModal, setShowPreferentialModal] = useState(false);
+  const [showSiteContent, setShowSiteContent] = useState(false);
 
-  // Check if modal should be shown on mount
+  // Modal flow: Calendar Modal → Preferential Vote Modal → Site Content
   useEffect(() => {
     // Dev helper: Expose function to clear localStorage for testing
     if (typeof window !== "undefined") {
-      (window as any).clearPreferentialVoteStorage = () => {
+      (window as any).clearAllStorage = () => {
         localStorage.removeItem("preferentialVoteSubmitted");
-        console.log("✅ Preferential vote storage cleared! Refresh the page to see the modal again.");
+        localStorage.removeItem("calendarModalHandled");
+        console.log("✅ All storage cleared! Refresh the page to see modals again.");
       };
-      console.log("💡 Dev Helper: Run clearPreferentialVoteStorage() in console to reset and test the modal again");
+      console.log("💡 Dev Helper: Run clearAllStorage() in console to reset and test modals again");
     }
     
     // Check URL parameters
@@ -39,44 +43,74 @@ export default function Home() {
     // If ?clear=true, clear localStorage and reload
     if (clearParam === "true") {
       localStorage.removeItem("preferentialVoteSubmitted");
-      console.log("✅ Cleared preferential vote storage via URL parameter");
-      // Remove the clear parameter and reload
+      localStorage.removeItem("calendarModalHandled");
+      console.log("✅ Cleared all storage via URL parameter");
       urlParams.delete("clear");
       const newUrl = window.location.pathname + (urlParams.toString() ? "?" + urlParams.toString() : "");
       window.history.replaceState({}, "", newUrl);
-      // Reload to show modal
       window.location.reload();
       return;
     }
     
-    // Check if user has already seen/submitted the modal
-    const hasSeenModal = localStorage.getItem("preferentialVoteSubmitted");
+    // Check if user has already handled calendar modal
+    const calendarHandled = localStorage.getItem("calendarModalHandled");
+    const hasVoted = localStorage.getItem("preferentialVoteSubmitted") === "voted";
     
-    console.log("🔍 Modal Check:", {
-      hasSeenModal,
-      voteParam,
-      shouldShow: voteParam === "true" || (!hasSeenModal && voteParam !== "false")
-    });
+    // Stage 1: Show Calendar Modal first (if not handled)
+    if (!calendarHandled) {
+      console.log("✅ Showing calendar modal");
+      setShowCalendarModal(true);
+      setShowSiteContent(false);
+      return;
+    }
     
-    // Show modal if:
-    // 1. URL has ?vote=true parameter (for WhatsApp links - always show, even if voted before), OR
-    // 2. User hasn't seen it before (first visit) and no explicit ?vote=false
-    if (voteParam === "true" || (!hasSeenModal && voteParam !== "false")) {
-      console.log("✅ Showing preferential vote modal");
-      setShowPreferentialModal(true);
+    // Stage 2: After calendar modal, show Preferential Vote Modal (if not voted)
+    if (calendarHandled && !hasVoted) {
+      const hasSeenVoteModal = localStorage.getItem("preferentialVoteSubmitted");
+      const shouldShowVote = voteParam === "true" || (!hasSeenVoteModal && voteParam !== "false");
       
-      // Track that modal was opened
-      fetch("/api/preferential-vote-track", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "opened" }),
-      }).catch((error) => {
-        console.error("Error tracking modal open:", error);
-      });
-    } else {
-      console.log("❌ Not showing modal - user has already seen/voted");
+      if (shouldShowVote) {
+        console.log("✅ Showing preferential vote modal");
+        setShowPreferentialModal(true);
+        setShowSiteContent(false);
+        
+        // Track that modal was opened
+        fetch("/api/preferential-vote-track", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "opened" }),
+        }).catch((error) => {
+          console.error("Error tracking modal open:", error);
+        });
+        return;
+      }
+    }
+    
+    // Stage 3: Show full site content (after both modals are handled)
+    if (calendarHandled && (hasVoted || voteParam === "false")) {
+      console.log("✅ Showing full site content");
+      setShowSiteContent(true);
     }
   }, []);
+
+  // Handle calendar modal completion
+  const handleCalendarModalComplete = () => {
+    localStorage.setItem("calendarModalHandled", "true");
+    setShowCalendarModal(false);
+    
+    // After calendar modal, check if we should show vote modal
+    const hasVoted = localStorage.getItem("preferentialVoteSubmitted") === "voted";
+    const urlParams = new URLSearchParams(window.location.search);
+    const voteParam = urlParams.get("vote");
+    const hasSeenVoteModal = localStorage.getItem("preferentialVoteSubmitted");
+    const shouldShowVote = voteParam === "true" || (!hasSeenVoteModal && voteParam !== "false");
+    
+    if (!hasVoted && shouldShowVote) {
+      setShowPreferentialModal(true);
+    } else {
+      setShowSiteContent(true);
+    }
+  };
 
   const handleSupportSubmit = async (
     supportType: SupportType,
@@ -145,44 +179,65 @@ export default function Home() {
     }
   };
 
+  // Handle vote submission completion
+  const handleVoteComplete = () => {
+    setShowPreferentialModal(false);
+    setShowSiteContent(true);
+  };
+
   return (
     <main className="min-h-screen bg-black">
-      <Navigation />
-      
-      {/* Fixed Language Toggle - Top Right */}
-      <div className="fixed top-20 right-4 z-50">
-        <LanguageToggle />
-      </div>
+      {/* Show site content only after modals are handled */}
+      {showSiteContent && (
+        <>
+          <Navigation />
+          
+          {/* Fixed Language Toggle - Top Right */}
+          <div className="fixed top-20 right-4 z-50">
+            <LanguageToggle />
+          </div>
 
-      <Hero
-        language={language}
-        layoutVariant={candidateConfig.layoutVariant}
-      />
+          <Hero
+            language={language}
+            layoutVariant={candidateConfig.layoutVariant}
+          />
 
-      <About
-        language={language}
-        layoutVariant={candidateConfig.layoutVariant}
-      />
+          <About
+            language={language}
+            layoutVariant={candidateConfig.layoutVariant}
+          />
 
-      <Experience
-        language={language}
-        layoutVariant={candidateConfig.layoutVariant}
-      />
+          <Experience
+            language={language}
+            layoutVariant={candidateConfig.layoutVariant}
+          />
 
-      <Vision
-        language={language}
-        layoutVariant={candidateConfig.layoutVariant}
-      />
+          <Vision
+            language={language}
+            layoutVariant={candidateConfig.layoutVariant}
+          />
 
-      <div className="pb-32">
-        <SupportButton
+          <div className="pb-32">
+            <SupportButton
+              language={language}
+              onClick={() => setShowSupportModal(true)}
+            />
+          </div>
+
+          <Footer />
+        </>
+      )}
+
+      {/* Calendar Modal - Stage 1 */}
+      {showCalendarModal && (
+        <CalendarModal
           language={language}
-          onClick={() => setShowSupportModal(true)}
+          onClose={handleCalendarModalComplete}
+          onPermissionHandled={handleCalendarModalComplete}
         />
-      </div>
+      )}
 
-      <Footer />
-
+      {/* Support Modal - Always available */}
       {showSupportModal && (
         <SupportModal
           language={language}
@@ -191,13 +246,14 @@ export default function Home() {
         />
       )}
 
+      {/* Preferential Vote Modal - Stage 2 */}
       {showPreferentialModal && (
         <PreferentialVoteModal
           language={language}
           onClose={() => {
             setShowPreferentialModal(false);
+            setShowSiteContent(true);
             // Track that modal was closed without voting
-            // Only track if user hasn't voted (localStorage check)
             const hasVoted = localStorage.getItem("preferentialVoteSubmitted") === "voted";
             if (!hasVoted) {
               fetch("/api/preferential-vote-track", {
@@ -209,7 +265,10 @@ export default function Home() {
               });
             }
           }}
-          onVoteSubmit={handlePreferentialVoteSubmit}
+          onVoteSubmit={async (preferentialOrder) => {
+            await handlePreferentialVoteSubmit(preferentialOrder);
+            handleVoteComplete();
+          }}
         />
       )}
     </main>

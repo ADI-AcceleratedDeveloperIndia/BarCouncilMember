@@ -86,9 +86,7 @@ body {
 button {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
-}
-
-/* Smooth scrolling on mobile */
+}/* Smooth scrolling on mobile */
 @media (max-width: 640px) {
   * {
     -webkit-overflow-scrolling: touch;
