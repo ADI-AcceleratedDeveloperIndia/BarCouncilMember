@@ -1,10 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 import { candidateConfig } from "@/config/candidate.config";
+import admin from "firebase-admin";
 
-// Firebase project configuration
-const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || candidateConfig.firebaseConfig?.projectId || "";
-const serverKey = process.env.FIREBASE_SERVER_KEY || "";
+// Initialize Firebase Admin SDK
+let firebaseAdminInitialized = false;
+
+function initializeFirebaseAdmin() {
+  if (firebaseAdminInitialized) return;
+
+  try {
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+    
+    if (!serviceAccountJson) {
+      console.warn("FIREBASE_SERVICE_ACCOUNT not found, push notifications will not work");
+      return;
+    }
+
+    const serviceAccount = JSON.parse(serviceAccountJson);
+
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+      });
+      firebaseAdminInitialized = true;
+      console.log("Firebase Admin SDK initialized successfully");
+    }
+  } catch (error) {
+    console.error("Error initializing Firebase Admin SDK:", error);
+  }
+}
+
+// Initialize on module load
+initializeFirebaseAdmin();
 
 // Initialize Google Sheets API
 const auth = new google.auth.GoogleAuth({
@@ -48,20 +76,16 @@ async function getAllFCMTokens(): Promise<string[]> {
 
 async function sendFCMNotification(token: string, title: string, body: string): Promise<boolean> {
   try {
-    if (!serverKey) {
-      throw new Error("FIREBASE_SERVER_KEY not configured");
+    if (!firebaseAdminInitialized || !admin.apps.length) {
+      throw new Error("Firebase Admin SDK not initialized. Please add FIREBASE_SERVICE_ACCOUNT to environment variables.");
     }
 
-    // Use FCM Legacy API (simpler, works with server key)
-    const fcmUrl = "https://fcm.googleapis.com/fcm/send";
-
-    const payload = {
-      to: token,
+    // Use Firebase Admin SDK to send notification
+    const message = {
+      token: token,
       notification: {
         title: title,
         body: body,
-        icon: "/A-logo.png",
-        badge: "/A-logo.png",
       },
       webpush: {
         notification: {
@@ -76,30 +100,19 @@ async function sendFCMNotification(token: string, title: string, body: string): 
       },
     };
 
-    const response = await fetch(fcmUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `key=${serverKey}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `HTTP ${response.status}`);
-    }
-
-    const result = await response.json();
+    const response = await admin.messaging().send(message);
     
-    // Check if message was sent successfully
-    if (result.success === 1 || result.message_id) {
-      return true;
-    }
-    
-    return false;
+    console.log("Successfully sent message:", response);
+    return true;
   } catch (error: any) {
     console.error(`Error sending FCM notification to token:`, error.message);
+    
+    // Check if token is invalid/expired
+    if (error.code === "messaging/invalid-registration-token" || 
+        error.code === "messaging/registration-token-not-registered") {
+      console.log("Token is invalid or expired, should be removed from database");
+    }
+    
     return false;
   }
 }
@@ -116,11 +129,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!serverKey) {
+    if (!firebaseAdminInitialized || !admin.apps.length) {
       return NextResponse.json(
         {
-          error: "FIREBASE_SERVER_KEY not configured",
-          message: "Please add FIREBASE_SERVER_KEY to Vercel environment variables. Get it from Firebase Console → Project Settings → Cloud Messaging → Server Key",
+          error: "Firebase Admin SDK not initialized",
+          message: "Please add FIREBASE_SERVICE_ACCOUNT to Vercel environment variables. See HOW_TO_CREATE_SERVICE_ACCOUNT.md for instructions.",
         },
         { status: 500 }
       );
@@ -153,17 +166,28 @@ export async function POST(request: NextRequest) {
     let failureCount = 0;
     const failedTokens: string[] = [];
 
-    const sendPromises = targetTokens.map(async (token, index) => {
-      const success = await sendFCMNotification(token, title, messageBody);
-      if (success) {
-        successCount++;
-      } else {
-        failureCount++;
-        failedTokens.push(token);
-      }
-    });
+    // Send in batches to avoid overwhelming the API
+    const batchSize = 100;
+    for (let i = 0; i < targetTokens.length; i += batchSize) {
+      const batch = targetTokens.slice(i, i + batchSize);
+      
+      const sendPromises = batch.map(async (token) => {
+        const success = await sendFCMNotification(token, title, messageBody);
+        if (success) {
+          successCount++;
+        } else {
+          failureCount++;
+          failedTokens.push(token);
+        }
+      });
 
-    await Promise.all(sendPromises);
+      await Promise.all(sendPromises);
+      
+      // Small delay between batches to avoid rate limits
+      if (i + batchSize < targetTokens.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
 
     return NextResponse.json({
       success: true,
