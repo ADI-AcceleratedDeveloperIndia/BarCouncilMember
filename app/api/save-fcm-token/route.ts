@@ -145,12 +145,32 @@ export async function POST(request: NextRequest) {
     console.error("Error details:", {
       message: error.message,
       code: error.code,
-      stack: error.stack,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
     });
+    
+    // Provide more specific error messages
+    let errorMessage = error.message || "Unknown error";
+    let errorDetails = "";
+    
+    if (error.code === 403 || error.message?.includes("permission") || error.message?.includes("403")) {
+      errorMessage = "Permission denied";
+      errorDetails = `The Google Sheets service account (${process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL}) does not have access to the Google Sheet. Please share the sheet with this email address with Editor permission.`;
+    } else if (error.code === 404 || error.message?.includes("not found")) {
+      errorMessage = "Google Sheet not found";
+      errorDetails = `Could not find the Google Sheet. Please verify the Sheet ID is correct: ${candidateConfig.googleSheetId}`;
+    } else if (error.message?.includes("invalid_grant") || error.message?.includes("unauthorized")) {
+      errorMessage = "Authentication failed";
+      errorDetails = "The Google Sheets service account credentials are invalid. Please check GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY in Vercel.";
+    }
+    
     return NextResponse.json(
       { 
-        error: "Failed to save FCM token",
-        details: error.message || "Unknown error"
+        error: errorMessage,
+        details: errorDetails || error.message || "Unknown error",
+        serviceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        sheetId: candidateConfig.googleSheetId,
       },
       { status: 500 }
     );

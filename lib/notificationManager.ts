@@ -112,7 +112,11 @@ async function subscribeToPushNotifications(): Promise<void> {
           console.log("✅ FCM token saved to Google Sheets successfully");
         } else {
           const errorData = await response.json().catch(() => ({}));
-          console.error("❌ Failed to save FCM token:", errorData.error || response.statusText);
+          const errorMessage = errorData.error || errorData.details || response.statusText;
+          console.error("❌ Failed to save FCM token:", errorMessage);
+          console.error("Full error response:", errorData);
+          // Show user-friendly error
+          alert(`Failed to save notification subscription. Error: ${errorMessage}`);
         }
       } catch (error) {
         console.error("❌ Error saving FCM token:", error);
