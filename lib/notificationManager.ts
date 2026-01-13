@@ -100,15 +100,22 @@ async function subscribeToPushNotifications(): Promise<void> {
       // Save token to localStorage
       localStorage.setItem("fcmToken", token);
       
-      // Send token to server (optional - for server-side notifications)
+      // Send token to server (required - for server-side notifications)
       try {
-        await fetch("/api/save-fcm-token", {
+        const response = await fetch("/api/save-fcm-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
         });
+        
+        if (response.ok) {
+          console.log("✅ FCM token saved to Google Sheets successfully");
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("❌ Failed to save FCM token:", errorData.error || response.statusText);
+        }
       } catch (error) {
-        console.error("Error saving FCM token:", error);
+        console.error("❌ Error saving FCM token:", error);
       }
 
       // Listen for foreground messages

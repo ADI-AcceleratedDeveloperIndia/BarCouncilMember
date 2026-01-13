@@ -66,14 +66,36 @@ export async function POST(request: NextRequest) {
     const { token } = body;
 
     if (!token) {
+      console.error("❌ FCM token missing in request");
       return NextResponse.json(
         { error: "Token is required" },
         { status: 400 }
       );
     }
 
+    console.log("📝 Saving FCM token to Google Sheets...");
+
     // Ensure sheet exists
     await ensureSheetExists();
+    console.log("✅ Sheet 'Push Notification Subscribers' exists");
+
+    // Check if token already exists (avoid duplicates)
+    try {
+      const existingTokens = await sheets.spreadsheets.values.get({
+        spreadsheetId: candidateConfig.googleSheetId,
+        range: "Push Notification Subscribers!B2:B",
+      });
+
+      const rows = existingTokens.data.values || [];
+      const tokenExists = rows.some((row) => row[0]?.toString().trim() === token);
+
+      if (tokenExists) {
+        console.log("ℹ️  FCM token already exists in sheet, skipping duplicate");
+        return NextResponse.json({ success: true, message: "Token already exists" });
+      }
+    } catch (error) {
+      console.warn("⚠️  Could not check for existing token, proceeding to add:", error);
+    }
 
     // Get current IST time
     const now = new Date();
@@ -90,11 +112,20 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true });
+    console.log("✅ FCM token saved successfully to Google Sheets");
+    return NextResponse.json({ success: true, message: "Token saved successfully" });
   } catch (error: any) {
-    console.error("Error saving FCM token:", error);
+    console.error("❌ Error saving FCM token:", error);
+    console.error("Error details:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
     return NextResponse.json(
-      { error: "Failed to save FCM token" },
+      { 
+        error: "Failed to save FCM token",
+        details: error.message || "Unknown error"
+      },
       { status: 500 }
     );
   }
