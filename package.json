@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "firebase": "^12.7.0",
+    "firebase-admin": "^13.6.0",
     "googleapis": "^129.0.0",
     "html-to-image": "^1.11.11",
     "next": "^14.2.0",
