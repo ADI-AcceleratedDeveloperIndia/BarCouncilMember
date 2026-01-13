@@ -34,16 +34,40 @@ function initializeFirebaseAdmin() {
 // Initialize on module load
 initializeFirebaseAdmin();
 
-// Initialize Google Sheets API
-const auth = new google.auth.GoogleAuth({
-  credentials: {
-    client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-  },
-  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-});
+// Helper function to parse private key (handles quotes and newlines)
+function parsePrivateKey(privateKey: string | undefined): string | undefined {
+  if (!privateKey) return undefined;
+  
+  // Remove quotes if present
+  if (
+    (privateKey.startsWith('"') && privateKey.endsWith('"')) ||
+    (privateKey.startsWith("'") && privateKey.endsWith("'"))
+  ) {
+    privateKey = privateKey.slice(1, -1);
+  }
+  
+  // Replace literal \n with actual newlines
+  privateKey = privateKey.replace(/\\n/g, "\n");
+  
+  return privateKey;
+}
 
-const sheets = google.sheets({ version: "v4", auth });
+// Initialize Google Sheets API
+function getSheetsClient() {
+  const privateKey = parsePrivateKey(process.env.GOOGLE_PRIVATE_KEY);
+  
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      private_key: privateKey,
+    },
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
+
+  return google.sheets({ version: "v4", auth });
+}
+
+const sheets = getSheetsClient();
 
 async function getAllFCMTokens(): Promise<string[]> {
   try {
