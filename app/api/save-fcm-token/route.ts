@@ -160,14 +160,26 @@ export async function POST(request: NextRequest) {
     const timestamp = istTime.toISOString().replace("T", " ").substring(0, 19);
 
     // Append data to sheet
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: candidateConfig.googleSheetId,
-      range: "Push Notification Subscribers!A:C",
-      valueInputOption: "RAW",
-      requestBody: {
-        values: [[timestamp, token, "Active"]],
-      },
-    });
+    try {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: candidateConfig.googleSheetId,
+        range: "Push Notification Subscribers!A:C",
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [[timestamp, token, "Active"]],
+        },
+      });
+    } catch (appendError: any) {
+      console.error("❌ Error appending to sheet:", appendError);
+      // Try with exact sheet name match (case-sensitive)
+      if (appendError.message?.includes("Unable to parse range")) {
+        // Sheet name might have different case or spaces
+        throw new Error(
+          `Sheet name mismatch. Please verify the sheet tab is named exactly "Push Notification Subscribers" (case-sensitive, no extra spaces). Error: ${appendError.message}`
+        );
+      }
+      throw appendError;
+    }
 
     console.log("✅ FCM token saved successfully to Google Sheets");
     return NextResponse.json({ success: true, message: "Token saved successfully" });

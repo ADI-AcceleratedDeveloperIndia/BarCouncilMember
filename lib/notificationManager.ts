@@ -113,10 +113,17 @@ async function subscribeToPushNotifications(): Promise<void> {
         } else {
           const errorData = await response.json().catch(() => ({}));
           const errorMessage = errorData.error || errorData.details || response.statusText;
+          const errorDetails = errorData.details || "";
           console.error("❌ Failed to save FCM token:", errorMessage);
           console.error("Full error response:", errorData);
-          // Show user-friendly error
-          alert(`Failed to save notification subscription. Error: ${errorMessage}`);
+          console.error("Service Account Email:", errorData.serviceAccountEmail);
+          console.error("Sheet ID:", errorData.sheetId);
+          
+          // Show user-friendly error with details
+          const fullErrorMessage = errorDetails 
+            ? `${errorMessage}\n\n${errorDetails}`
+            : errorMessage;
+          alert(`Failed to save notification subscription.\n\nError: ${fullErrorMessage}`);
         }
       } catch (error) {
         console.error("❌ Error saving FCM token:", error);
