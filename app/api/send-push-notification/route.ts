@@ -119,14 +119,17 @@ async function getAllFCMTokens(): Promise<string[]> {
   }
 }
 
-async function sendFCMNotification(token: string, title: string, body: string): Promise<boolean> {
+async function sendFCMNotification(token: string, title: string, body: string, voiceNoteUrl?: string): Promise<boolean> {
   try {
     if (!firebaseAdminInitialized || !admin.apps.length) {
       throw new Error("Firebase Admin SDK not initialized. Please add FIREBASE_SERVICE_ACCOUNT to environment variables.");
     }
 
+    // Determine the link - if voice note exists, go to voice note player page
+    const link = voiceNoteUrl ? `/voice-note?url=${encodeURIComponent(voiceNoteUrl)}` : "/";
+
     // Use Firebase Admin SDK to send notification
-    const message = {
+    const message: any = {
       token: token,
       notification: {
         title: title,
@@ -140,8 +143,18 @@ async function sendFCMNotification(token: string, title: string, body: string): 
           badge: "/A-logo.png",
         },
         fcmOptions: {
-          link: "/",
+          link: link,
         },
+        data: {
+          // Include voice note URL in data payload
+          voiceNoteUrl: voiceNoteUrl || "",
+          hasVoiceNote: voiceNoteUrl ? "true" : "false",
+        },
+      },
+      data: {
+        // Also include in top-level data for consistency
+        voiceNoteUrl: voiceNoteUrl || "",
+        hasVoiceNote: voiceNoteUrl ? "true" : "false",
       },
     };
 
@@ -165,7 +178,7 @@ async function sendFCMNotification(token: string, title: string, body: string): 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, body: messageBody, tokens: customTokens, sendToAll } = body;
+    const { title, body: messageBody, tokens: customTokens, sendToAll, voiceNoteUrl } = body;
 
     if (!title || !messageBody) {
       return NextResponse.json(
@@ -217,7 +230,7 @@ export async function POST(request: NextRequest) {
       const batch = targetTokens.slice(i, i + batchSize);
       
       const sendPromises = batch.map(async (token) => {
-        const success = await sendFCMNotification(token, title, messageBody);
+        const success = await sendFCMNotification(token, title, messageBody, voiceNoteUrl);
         if (success) {
           successCount++;
         } else {

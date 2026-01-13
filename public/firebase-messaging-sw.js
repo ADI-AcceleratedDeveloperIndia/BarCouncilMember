@@ -131,18 +131,36 @@ self.addEventListener("notificationclick", (event) => {
 
   event.notification.close();
 
+  // Get the URL to open (from notification data or default to home)
+  const notificationData = event.notification.data || {};
+  const voiceNoteUrl = notificationData.voiceNoteUrl;
+  const hasVoiceNote = notificationData.hasVoiceNote === "true" || notificationData.hasVoiceNote === true;
+  
+  // Determine URL to open
+  let urlToOpen = "/";
+  if (hasVoiceNote && voiceNoteUrl) {
+    urlToOpen = `/voice-note?url=${encodeURIComponent(voiceNoteUrl)}`;
+  } else if (event.notification.data?.url) {
+    urlToOpen = event.notification.data.url;
+  }
+
   // Open the app when notification is clicked
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      // If app is already open, focus it
+      // If app is already open, focus it and navigate to the URL
       for (const client of clientList) {
-        if (client.url === "/" && "focus" in client) {
+        if (client.url && "focus" in client && "navigate" in client) {
+          client.focus();
+          // Try to navigate if possible (some browsers support this)
+          if (typeof client.navigate === "function") {
+            return client.navigate(urlToOpen);
+          }
           return client.focus();
         }
       }
       // Otherwise, open a new window
       if (clients.openWindow) {
-        return clients.openWindow("/");
+        return clients.openWindow(urlToOpen);
       }
     })
   );

@@ -9,6 +9,7 @@ function PushNotificationSender() {
   const [message, setMessage] = useState(
     `Dear Advocate, please cast your first preferential vote for ${candidateConfig.name} in the Telangana State Bar Council elections.`
   );
+  const [voiceNoteUrl, setVoiceNoteUrl] = useState("");
   const [sendToAll, setSendToAll] = useState(true);
   const [customTokens, setCustomTokens] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -52,6 +53,11 @@ function PushNotificationSender() {
         body: message.trim(),
         sendToAll: sendToAll,
       };
+
+      // Add voice note URL if provided
+      if (voiceNoteUrl.trim()) {
+        payload.voiceNoteUrl = voiceNoteUrl.trim();
+      }
 
       if (!sendToAll && customTokens.trim()) {
         // Parse tokens (one per line or comma-separated)
@@ -142,6 +148,23 @@ function PushNotificationSender() {
               className="w-full px-4 py-2 bg-black border border-gold rounded text-white focus:outline-none focus:ring-2 focus:ring-gold resize-none"
               placeholder="Enter notification message"
             />
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-gold font-semibold mb-2">
+              Voice Note URL (Optional)
+            </label>
+            <input
+              type="url"
+              value={voiceNoteUrl}
+              onChange={(e) => setVoiceNoteUrl(e.target.value)}
+              className="w-full px-4 py-2 bg-black border border-gold rounded text-white focus:outline-none focus:ring-2 focus:ring-gold"
+              placeholder="https://example.com/voice-note.mp3"
+            />
+            <p className="text-sm text-gray-400 mt-2">
+              When users click the notification, they&apos;ll be taken to a page to play the voice note. 
+              Supported formats: MP3, WAV, OGG, M4A
+            </p>
           </div>
 
           <div className="mb-6">
