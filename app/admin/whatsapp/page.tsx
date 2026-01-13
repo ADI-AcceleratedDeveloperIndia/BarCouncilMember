@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { candidateConfig } from "@/config/candidate.config";
+import AdminProtection from "@/components/AdminProtection";
 
-export default function WhatsAppBulkSender() {
+function WhatsAppBulkSender() {
   const [contacts, setContacts] = useState<string[]>([]);
   const [message, setMessage] = useState(
     `Dear Advocate, please cast your first preferential vote for ${candidateConfig.name} in the Telangana State Bar Council elections. Click here: `
@@ -216,6 +217,14 @@ export default function WhatsAppBulkSender() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function ProtectedWhatsAppBulkSender() {
+  return (
+    <AdminProtection>
+      <WhatsAppBulkSender />
+    </AdminProtection>
   );
 }
 

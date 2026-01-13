@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { candidateConfig } from "@/config/candidate.config";
+import AdminProtection from "@/components/AdminProtection";
 
-export default function PushNotificationSender() {
+function PushNotificationSender() {
   const [title, setTitle] = useState("Important Election Update");
   const [message, setMessage] = useState(
     `Dear Advocate, please cast your first preferential vote for ${candidateConfig.name} in the Telangana State Bar Council elections.`
@@ -11,6 +12,7 @@ export default function PushNotificationSender() {
   const [sendToAll, setSendToAll] = useState(true);
   const [customTokens, setCustomTokens] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [subscriberCount, setSubscriberCount] = useState<number | null>(null);
   const [result, setResult] = useState<{
     success: boolean;
     message: string;
@@ -18,6 +20,22 @@ export default function PushNotificationSender() {
     failureCount?: number;
     totalTokens?: number;
   } | null>(null);
+
+  // Fetch subscriber count on mount
+  useEffect(() => {
+    fetchSubscriberCount();
+  }, []);
+
+  const fetchSubscriberCount = async () => {
+    try {
+      const response = await fetch("/api/get-subscriber-count");
+      const data = await response.json();
+      setSubscriberCount(data.count || 0);
+    } catch (error) {
+      console.error("Error fetching subscriber count:", error);
+      setSubscriberCount(0);
+    }
+  };
 
   const handleSend = async () => {
     if (!title.trim() || !message.trim()) {
@@ -79,12 +97,24 @@ export default function PushNotificationSender() {
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl font-bold text-gold gold-text-shimmer mb-2">
-          Send Push Notifications
-        </h1>
-        <p className="text-gray-400 mb-8">
-          Send push notifications to all subscribers or specific users
-        </p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gold gold-text-shimmer mb-2">
+              Send Push Notifications
+            </h1>
+            <p className="text-gray-400">
+              Send push notifications to all subscribers or specific users
+            </p>
+          </div>
+          <div className="bg-gold/20 border border-gold rounded-lg px-4 py-3 text-center">
+            <div className="text-2xl sm:text-3xl font-bold text-gold">
+              {subscriberCount !== null ? subscriberCount : "..."}
+            </div>
+            <div className="text-xs sm:text-sm text-gray-300 mt-1">
+              Subscribers
+            </div>
+          </div>
+        </div>
 
         {/* Notification Form */}
         <div className="bg-gray-900 border border-gold rounded-lg p-6 mb-6">
@@ -220,5 +250,13 @@ export default function PushNotificationSender() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ProtectedPushNotificationSender() {
+  return (
+    <AdminProtection>
+      <PushNotificationSender />
+    </AdminProtection>
   );
 }
