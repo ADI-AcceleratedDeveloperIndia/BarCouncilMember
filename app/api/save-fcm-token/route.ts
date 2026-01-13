@@ -30,42 +30,73 @@ async function ensureSheetExists() {
     );
 
     if (!sheetExists) {
-      console.log(`📝 Sheet "${sheetName}" not found, creating...`);
+      console.log(`📝 Sheet "${sheetName}" not found, attempting to create...`);
       
-      // Create the sheet
-      const createResponse = await sheets.spreadsheets.batchUpdate({
-        spreadsheetId,
-        requestBody: {
-          requests: [
-            {
-              addSheet: {
-                properties: {
-                  title: sheetName,
+      try {
+        // Create the sheet
+        const createResponse = await sheets.spreadsheets.batchUpdate({
+          spreadsheetId,
+          requestBody: {
+            requests: [
+              {
+                addSheet: {
+                  properties: {
+                    title: sheetName,
+                  },
                 },
               },
-            },
-          ],
-        },
-      });
+            ],
+          },
+        });
 
-      console.log(`✅ Sheet "${sheetName}" created successfully`);
+        console.log(`✅ Sheet "${sheetName}" created successfully`);
 
-      // Wait a moment for sheet to be ready
-      await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait a moment for sheet to be ready
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Add headers
-      await sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range: `${sheetName}!A1:C1`,
-        valueInputOption: "RAW",
-        requestBody: {
-          values: [["Timestamp", "FCM Token", "Status"]],
-        },
-      });
+        // Add headers
+        await sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `${sheetName}!A1:C1`,
+          valueInputOption: "RAW",
+          requestBody: {
+            values: [["Timestamp", "FCM Token", "Status"]],
+          },
+        });
 
-      console.log(`✅ Headers added to "${sheetName}"`);
+        console.log(`✅ Headers added to "${sheetName}"`);
+      } catch (createError: any) {
+        // If creation fails, provide helpful message
+        console.error("❌ Failed to create sheet automatically:", createError);
+        throw new Error(
+          `Could not create "${sheetName}" sheet automatically. Please create it manually: 1) Click "+" at bottom to add new sheet, 2) Rename to "Push Notification Subscribers", 3) Add headers in row 1: Timestamp | FCM Token | Status. Error: ${createError.message}`
+        );
+      }
     } else {
       console.log(`✅ Sheet "${sheetName}" already exists`);
+      
+      // Verify headers exist
+      try {
+        const headers = await sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: `${sheetName}!A1:C1`,
+        });
+        
+        if (!headers.data.values || headers.data.values.length === 0) {
+          console.log(`📝 Headers missing, adding them...`);
+          await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: `${sheetName}!A1:C1`,
+            valueInputOption: "RAW",
+            requestBody: {
+              values: [["Timestamp", "FCM Token", "Status"]],
+            },
+          });
+          console.log(`✅ Headers added`);
+        }
+      } catch (headerError) {
+        console.warn("⚠️  Could not verify/add headers:", headerError);
+      }
     }
   } catch (error: any) {
     console.error("❌ Error ensuring sheet exists:", error);
