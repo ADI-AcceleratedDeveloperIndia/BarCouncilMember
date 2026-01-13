@@ -100,7 +100,26 @@ async function setupMessaging() {
 
 // Setup messaging when service worker activates
 self.addEventListener("activate", (event) => {
-  event.waitUntil(setupMessaging());
+  // Take control of all pages immediately (skip waiting)
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(), // Take control immediately
+      setupMessaging(),
+    ])
+  );
+});
+
+// Handle service worker updates silently (prevent "website updated" notification)
+self.addEventListener("install", (event) => {
+  // Skip waiting - activate new service worker immediately
+  self.skipWaiting();
+});
+
+// Listen for skip waiting message from main thread
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 // Also setup immediately if already activated
