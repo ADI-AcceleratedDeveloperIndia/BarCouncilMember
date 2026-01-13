@@ -10,24 +10,45 @@ function initializeFirebaseAdmin() {
   if (firebaseAdminInitialized) return;
 
   try {
-    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+    let serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
     
     if (!serviceAccountJson) {
       console.warn("FIREBASE_SERVICE_ACCOUNT not found, push notifications will not work");
       return;
     }
 
+    // Remove outer quotes if present (common when pasting JSON into Vercel)
+    serviceAccountJson = serviceAccountJson.trim();
+    if (
+      (serviceAccountJson.startsWith('"') && serviceAccountJson.endsWith('"')) ||
+      (serviceAccountJson.startsWith("'") && serviceAccountJson.endsWith("'"))
+    ) {
+      serviceAccountJson = serviceAccountJson.slice(1, -1);
+      // Unescape quotes inside the JSON
+      serviceAccountJson = serviceAccountJson.replace(/\\"/g, '"').replace(/\\'/g, "'");
+    }
+
     const serviceAccount = JSON.parse(serviceAccountJson);
+
+    // Validate required fields
+    if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
+      throw new Error("Invalid service account: missing required fields (project_id, private_key, or client_email)");
+    }
 
     if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
       });
       firebaseAdminInitialized = true;
-      console.log("Firebase Admin SDK initialized successfully");
+      console.log("✅ Firebase Admin SDK initialized successfully");
+      console.log(`   Project ID: ${serviceAccount.project_id}`);
+      console.log(`   Client Email: ${serviceAccount.client_email}`);
     }
-  } catch (error) {
-    console.error("Error initializing Firebase Admin SDK:", error);
+  } catch (error: any) {
+    console.error("❌ Error initializing Firebase Admin SDK:", error.message);
+    if (error instanceof SyntaxError) {
+      console.error("   This is a JSON parsing error. Check if FIREBASE_SERVICE_ACCOUNT is valid JSON.");
+    }
   }
 }
 
