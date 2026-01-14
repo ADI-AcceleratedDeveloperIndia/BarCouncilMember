@@ -35,6 +35,18 @@ function initializeFirebaseAdmin() {
       throw new Error("Invalid service account: missing required fields (project_id, private_key, or client_email)");
     }
 
+    // CRITICAL: Check if project IDs match
+    const tokenProjectId = candidateConfig.firebaseConfig?.projectId || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const serviceAccountProjectId = serviceAccount.project_id;
+    
+    if (tokenProjectId && serviceAccountProjectId && tokenProjectId !== serviceAccountProjectId) {
+      console.error("❌ PROJECT ID MISMATCH!");
+      console.error(`   Token Project ID: ${tokenProjectId}`);
+      console.error(`   Service Account Project ID: ${serviceAccountProjectId}`);
+      console.error("   Tokens from one project CANNOT be used with service account from another!");
+      throw new Error(`Project ID mismatch: Tokens are from "${tokenProjectId}" but service account is from "${serviceAccountProjectId}". They must match!`);
+    }
+
     if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
@@ -43,6 +55,7 @@ function initializeFirebaseAdmin() {
       console.log("✅ Firebase Admin SDK initialized successfully");
       console.log(`   Project ID: ${serviceAccount.project_id}`);
       console.log(`   Client Email: ${serviceAccount.client_email}`);
+      console.log(`   Token Project ID: ${tokenProjectId || "not set"}`);
     }
   } catch (error: any) {
     console.error("❌ Error initializing Firebase Admin SDK:", error.message);
