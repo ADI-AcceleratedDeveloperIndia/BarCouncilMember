@@ -20,9 +20,12 @@ function PushNotificationSender() {
     failedTokens?: string[];
   } | null>(null);
 
-  // Fetch subscriber count on mount
+  // Fetch subscriber count on mount (reads from sheet cell A1)
   useEffect(() => {
     fetchSubscriberCount();
+    // Refresh count every 10 seconds
+    const interval = setInterval(fetchSubscriberCount, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchSubscriberCount = async () => {
@@ -32,7 +35,7 @@ function PushNotificationSender() {
       setSubscriberCount(data.count || 0);
     } catch (error) {
       console.error("Error fetching subscriber count:", error);
-      setSubscriberCount(0);
+      // Don't set to 0 on error, keep previous value
     }
   };
 

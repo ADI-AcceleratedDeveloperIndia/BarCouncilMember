@@ -80,9 +80,7 @@ body {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
-}
-
-/* Prevent text selection on mobile buttons */
+}/* Prevent text selection on mobile buttons */
 button {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;

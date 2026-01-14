@@ -42,36 +42,30 @@ export async function GET() {
     const spreadsheetId = candidateConfig.googleSheetId;
     const sheetName = "Push Notification Subscribers";
 
-    console.log("📊 Getting subscriber count from sheet:", sheetName);
+    console.log("📊 Getting subscriber count from sheet cell D1:", sheetName);
     console.log("📊 Sheet ID:", spreadsheetId);
 
-    // Read all tokens from the sheet
+    // Read count from cell D1 (where user will add COUNT formula - doesn't interfere with Timestamp column)
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${sheetName}!B2:B`, // Column B (FCM Token), starting from row 2
+      range: `${sheetName}!D1`, // Read from D1 where COUNT formula should be
     });
 
-    const rows = response.data.values || [];
-    console.log("📊 Rows found:", rows.length);
+    const values = response.data.values || [];
+    const countValue = values[0]?.[0];
     
-    let count = 0;
-
-    rows.forEach((row, index) => {
-      const token = row[0]?.toString().trim();
-      console.log(`📊 Row ${index + 2}: token length = ${token?.length || 0}`);
-      if (token && token.length > 50) {
-        // FCM tokens are long strings, filter out empty/short values
-        count++;
-      }
-    });
-
-    console.log("📊 Final count:", count);
+    // Parse the count (handle if it's a number or string)
+    const count = countValue ? parseInt(countValue.toString(), 10) : 0;
+    
+    console.log("📊 Count from sheet A1:", count);
     
     return NextResponse.json({ 
-      count,
+      count: isNaN(count) ? 0 : count,
+      source: "sheet_formula",
       debug: {
         sheetName,
-        rowsFound: rows.length,
+        cell: "D1",
+        rawValue: countValue,
         sheetId: spreadsheetId
       }
     });
