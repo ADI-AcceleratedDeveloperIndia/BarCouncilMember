@@ -85,37 +85,63 @@ export async function requestPushPermission(): Promise<boolean> {
   }
 }
 
+// Debug log storage for mobile debugging
+const debugLogs: string[] = [];
+function debugLog(message: string) {
+  console.log(message);
+  debugLogs.push(`${new Date().toLocaleTimeString()}: ${message}`);
+  // Store in localStorage for retrieval
+  if (typeof window !== "undefined") {
+    localStorage.setItem("fcm_debug_logs", JSON.stringify(debugLogs.slice(-20)));
+  }
+}
+
+// Export function to get debug logs (for debugging page)
+export function getDebugLogs(): string[] {
+  if (typeof window === "undefined") return [];
+  const stored = localStorage.getItem("fcm_debug_logs");
+  return stored ? JSON.parse(stored) : [];
+}
+
+// Export function to clear debug logs
+export function clearDebugLogs(): void {
+  debugLogs.length = 0;
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("fcm_debug_logs");
+  }
+}
+
 /**
  * Subscribe to push notifications using Firebase Cloud Messaging
  */
 async function subscribeToPushNotifications(): Promise<void> {
-  console.log("📱 Starting push notification subscription...");
+  debugLog("📱 Starting push notification subscription...");
   
   if (typeof window === "undefined") {
-    console.error("❌ Window is undefined");
+    debugLog("❌ Window is undefined");
     return;
   }
   
   if (!app) {
-    console.error("❌ Firebase app is not initialized");
+    debugLog("❌ Firebase app is not initialized");
     // Try to initialize again
     if (getApps().length > 0) {
       app = getApps()[0];
-      console.log("✅ Retrieved existing Firebase app");
+      debugLog("✅ Retrieved existing Firebase app");
     } else {
-      console.error("❌ No Firebase apps available");
+      debugLog("❌ No Firebase apps available");
       return;
     }
   }
 
   try {
-    console.log("⏳ Waiting for service worker...");
+    debugLog("⏳ Waiting for service worker...");
     // Register service worker
     const registration = await navigator.serviceWorker.ready;
-    console.log("✅ Service worker ready");
+    debugLog("✅ Service worker ready");
     
     // Get FCM token
-    console.log("⏳ Getting FCM token...");
+    debugLog("⏳ Getting FCM token...");
     const messaging = getMessaging(app);
     const token = await getToken(messaging, {
       vapidKey: vapidKey,
@@ -123,13 +149,13 @@ async function subscribeToPushNotifications(): Promise<void> {
     });
 
     if (token) {
-      console.log("✅ FCM Token obtained:", token.substring(0, 30) + "...");
+      debugLog("✅ FCM Token obtained: " + token.substring(0, 20) + "...");
       
       // Save token to localStorage
       localStorage.setItem("fcmToken", token);
       
       // Send token to server (required - for server-side notifications)
-      console.log("⏳ Saving FCM token to server...");
+      debugLog("⏳ Saving FCM token to server...");
       try {
         const response = await fetch("/api/save-fcm-token", {
           method: "POST",
@@ -139,20 +165,19 @@ async function subscribeToPushNotifications(): Promise<void> {
         
         if (response.ok) {
           const data = await response.json();
-          console.log("✅ FCM token saved to Google Sheets successfully!", data);
+          debugLog("✅ FCM token SAVED to Google Sheets!");
         } else {
           const errorData = await response.json().catch(() => ({}));
           const errorMessage = errorData.error || errorData.details || response.statusText;
-          console.error("❌ Failed to save FCM token:", errorMessage);
-          console.error("Full error response:", errorData);
+          debugLog("❌ Failed to save FCM token: " + errorMessage);
         }
-      } catch (error) {
-        console.error("❌ Network error saving FCM token:", error);
+      } catch (error: any) {
+        debugLog("❌ Network error saving FCM token: " + error.message);
       }
 
       // Listen for foreground messages
       onMessage(messaging, (payload) => {
-        console.log("📨 Message received:", payload);
+        debugLog("📨 Message received: " + payload.notification?.title);
         
         // Show notification even when app is in foreground
         if (Notification.permission === "granted") {
@@ -162,12 +187,10 @@ async function subscribeToPushNotifications(): Promise<void> {
         }
       });
     } else {
-      console.warn("⚠️ No FCM token available - this usually means VAPID key is wrong or service worker issue");
+      debugLog("⚠️ No FCM token - VAPID key issue or service worker problem");
     }
   } catch (error: any) {
-    console.error("❌ Error subscribing to push notifications:", error);
-    console.error("   Error message:", error.message);
-    console.error("   Error code:", error.code);
+    debugLog("❌ Error subscribing: " + (error.message || error.code || "Unknown"));
   }
 }
 
