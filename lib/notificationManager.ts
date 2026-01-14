@@ -165,7 +165,11 @@ async function subscribeToPushNotifications(): Promise<void> {
         
         if (response.ok) {
           const data = await response.json();
-          debugLog("✅ FCM token SAVED to Google Sheets!");
+          if (data.message === "Token already exists") {
+            debugLog("ℹ️ Token already exists in sheet (duplicate)");
+          } else {
+            debugLog("✅ NEW FCM token SAVED to Google Sheets!");
+          }
         } else {
           const errorData = await response.json().catch(() => ({}));
           const errorMessage = errorData.error || errorData.details || response.statusText;
