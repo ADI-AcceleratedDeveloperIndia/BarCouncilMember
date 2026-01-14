@@ -19,67 +19,76 @@ export default function CalendarModal({
   const [modalLanguage, setModalLanguage] = useState<Language>(language);
 
   const handleDownload = async () => {
+    // Download PDF immediately (don't wait for permission)
+    downloadPDF();
+    
+    // Track download event (non-blocking)
+    fetch("/api/calendar-download", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        action: "downloaded",
+        permissionGranted: false // Will be updated after permission check
+      }),
+    }).catch((error) => {
+      console.error("Error tracking download:", error);
+    });
+    
+    // Request push permission in background (non-blocking)
     setIsRequestingPermission(true);
-    try {
-      // Request push permission first
-      const permissionGranted = await requestPushPermission();
-      
-      // Start PDF download
-      downloadPDF();
-      
-      // Track download event
-      try {
-        await fetch("/api/calendar-download", {
+    requestPushPermission()
+      .then((permissionGranted) => {
+        // Update tracking with actual permission status
+        fetch("/api/calendar-download", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
             action: "downloaded",
             permissionGranted 
           }),
+        }).catch((error) => {
+          console.error("Error updating permission status:", error);
         });
-      } catch (error) {
-        console.error("Error tracking download:", error);
-      }
-      
-      // Close modal after a brief delay to show download started
-      setTimeout(() => {
-        onPermissionHandled();
-      }, 500);
-    } catch (error) {
-      console.error("Error requesting permission:", error);
-      // Still allow download even if permission fails
-      downloadPDF();
+      })
+      .catch((error) => {
+        console.error("Error requesting permission:", error);
+      })
+      .finally(() => {
+        setIsRequestingPermission(false);
+      });
+    
+    // Close modal immediately after download starts
+    setTimeout(() => {
       onPermissionHandled();
-    } finally {
-      setIsRequestingPermission(false);
-    }
+    }, 300);
   };
 
   const handleClose = async () => {
-    // Intercept close - request permission first
+    // Close immediately, request permission in background
+    onPermissionHandled();
+    
+    // Request push permission in background (non-blocking)
     setIsRequestingPermission(true);
-    try {
-      await requestPushPermission();
-      
-      // Track that user closed without downloading
-      try {
-        await fetch("/api/calendar-download", {
+    requestPushPermission()
+      .then((permissionGranted) => {
+        // Track that user closed without downloading
+        fetch("/api/calendar-download", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
             action: "closed_without_download",
-            permissionGranted: true 
+            permissionGranted 
           }),
+        }).catch((error) => {
+          console.error("Error tracking close:", error);
         });
-      } catch (error) {
-        console.error("Error tracking close:", error);
-      }
-    } catch (error) {
-      console.error("Error requesting permission:", error);
-    } finally {
-      setIsRequestingPermission(false);
-      onPermissionHandled();
-    }
+      })
+      .catch((error) => {
+        console.error("Error requesting permission:", error);
+      })
+      .finally(() => {
+        setIsRequestingPermission(false);
+      });
   };
 
   const content = {
@@ -156,14 +165,9 @@ export default function CalendarModal({
           {/* Download Button */}
           <button
             onClick={handleDownload}
-            disabled={isRequestingPermission}
-            className={`w-full px-6 py-3 sm:py-4 rounded-lg font-bold text-base sm:text-lg transition-all touch-manipulation ${
-              isRequestingPermission
-                ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                : "bg-gold text-black hover:bg-yellow-400 gold-glow-hover active:scale-95"
-            }`}
+            className="w-full px-6 py-3 sm:py-4 rounded-lg font-bold text-base sm:text-lg transition-all touch-manipulation bg-gold text-black hover:bg-yellow-400 gold-glow-hover active:scale-95"
           >
-            {isRequestingPermission ? t.requestingPermission : t.downloadButton}
+            {t.downloadButton}
           </button>
 
           {/* Info Text */}

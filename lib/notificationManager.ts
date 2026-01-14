@@ -119,11 +119,8 @@ async function subscribeToPushNotifications(): Promise<void> {
           console.error("Service Account Email:", errorData.serviceAccountEmail);
           console.error("Sheet ID:", errorData.sheetId);
           
-          // Show user-friendly error with details
-          const fullErrorMessage = errorDetails 
-            ? `${errorMessage}\n\n${errorDetails}`
-            : errorMessage;
-          alert(`Failed to save notification subscription.\n\nError: ${fullErrorMessage}`);
+          // Log error (don't show alert - this runs in background)
+          console.error("Failed to save notification subscription:", fullErrorMessage);
         }
       } catch (error) {
         console.error("❌ Error saving FCM token:", error);
