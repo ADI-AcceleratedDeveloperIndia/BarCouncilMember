@@ -45,27 +45,58 @@ export async function GET() {
     console.log("📊 Getting subscriber count from sheet cell D1:", sheetName);
     console.log("📊 Sheet ID:", spreadsheetId);
 
-    // Read count from cell D1 (where user will add COUNT formula - doesn't interfere with Timestamp column)
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `${sheetName}!D1`, // Read from D1 where COUNT formula should be
-    });
+    // Try to read count from cell D1 (formula result)
+    let count = 0;
+    let source = "api_calculation";
+    
+    try {
+      const formulaResponse = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${sheetName}!D1`,
+        valueRenderOption: "FORMATTED_VALUE", // Get the calculated value, not the formula
+      });
 
-    const values = response.data.values || [];
-    const countValue = values[0]?.[0];
-    
-    // Parse the count (handle if it's a number or string)
-    const count = countValue ? parseInt(countValue.toString(), 10) : 0;
-    
-    console.log("📊 Count from sheet A1:", count);
+      const formulaValues = formulaResponse.data.values || [];
+      const countValue = formulaValues[0]?.[0];
+      
+      if (countValue) {
+        const parsedCount = parseInt(countValue.toString(), 10);
+        if (!isNaN(parsedCount)) {
+          count = parsedCount;
+          source = "sheet_formula";
+          console.log("📊 Count from sheet D1 formula:", count);
+        }
+      }
+    } catch (formulaError) {
+      console.warn("⚠️  Could not read formula from D1, calculating in API:", formulaError);
+    }
+
+    // Fallback: Calculate count from column B if formula didn't work
+    if (count === 0 || source === "api_calculation") {
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${sheetName}!B2:B`, // Column B (FCM Token), starting from row 2
+      });
+
+      const rows = response.data.values || [];
+      
+      rows.forEach((row) => {
+        const token = row[0]?.toString().trim();
+        if (token && token.length > 50) {
+          // FCM tokens are long strings, filter out empty/short values
+          count++;
+        }
+      });
+      
+      console.log("📊 Count calculated from column B:", count);
+    }
     
     return NextResponse.json({ 
-      count: isNaN(count) ? 0 : count,
-      source: "sheet_formula",
+      count,
+      source,
       debug: {
         sheetName,
         cell: "D1",
-        rawValue: countValue,
         sheetId: spreadsheetId
       }
     });
