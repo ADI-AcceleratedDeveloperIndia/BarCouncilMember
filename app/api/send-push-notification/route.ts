@@ -188,8 +188,10 @@ async function sendFCMNotification(token: string, title: string, body: string): 
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("📥 Received push notification request");
     const body = await request.json();
     const { title, body: messageBody, tokens: customTokens, sendToAll } = body;
+    console.log("📥 Request body:", { title, messageBody: messageBody?.substring(0, 50), sendToAll, customTokensCount: customTokens?.length });
 
     if (!title || !messageBody) {
       return NextResponse.json(
@@ -249,19 +251,27 @@ export async function POST(request: NextRequest) {
       console.log(`📤 Processing batch ${Math.floor(i / batchSize) + 1}: ${batch.length} tokens (${i + 1}-${Math.min(i + batchSize, targetTokens.length)} of ${targetTokens.length})`);
       
       const sendPromises = batch.map(async (token, batchIndex) => {
-        const result = await sendFCMNotification(token, title, messageBody);
-        if (result.success) {
-          successCount++;
-          console.log(`✅ [${i + batchIndex + 1}/${targetTokens.length}] Sent successfully`);
-        } else {
+        try {
+          const result = await sendFCMNotification(token, title, messageBody);
+          if (result.success) {
+            successCount++;
+            console.log(`✅ [${i + batchIndex + 1}/${targetTokens.length}] Sent successfully`);
+          } else {
+            failureCount++;
+            const errorMsg = `${token.substring(0, 20)}... (${result.error})`;
+            failedTokens.push(errorMsg);
+            console.log(`❌ [${i + batchIndex + 1}/${targetTokens.length}] Failed: ${result.error}`);
+          }
+        } catch (error: any) {
           failureCount++;
-          const errorMsg = `${token.substring(0, 20)}... (${result.error})`;
+          const errorMsg = `${token.substring(0, 20)}... (${error.message || "Unexpected error"})`;
           failedTokens.push(errorMsg);
-          console.log(`❌ [${i + batchIndex + 1}/${targetTokens.length}] Failed: ${result.error}`);
+          console.error(`❌ [${i + batchIndex + 1}/${targetTokens.length}] Exception:`, error);
         }
       });
 
-      await Promise.all(sendPromises);
+      // Use Promise.allSettled to ensure all promises complete even if some fail
+      await Promise.allSettled(sendPromises);
       
       // Small delay between batches to avoid rate limits
       if (i + batchSize < targetTokens.length) {
@@ -282,9 +292,16 @@ export async function POST(request: NextRequest) {
       failedTokens: failedTokens.length > 0 ? failedTokens.slice(0, 10) : undefined, // Return first 10 failed tokens with error reasons
     });
   } catch (error: any) {
-    console.error("Error sending push notification:", error);
+    console.error("❌ CRITICAL ERROR in send-push-notification route:", error);
+    console.error("   Error stack:", error.stack);
+    console.error("   Error message:", error.message);
+    console.error("   Error code:", error.code);
     return NextResponse.json(
-      { error: error.message || "Failed to send push notification" },
+      { 
+        error: error.message || "Failed to send push notification",
+        details: error.stack || "No additional details",
+        code: error.code || "UNKNOWN_ERROR"
+      },
       { status: 500 }
     );
   }
