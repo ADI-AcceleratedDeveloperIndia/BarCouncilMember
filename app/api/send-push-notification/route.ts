@@ -108,6 +108,9 @@ async function getAllFCMTokens(): Promise<string[]> {
     const spreadsheetId = candidateConfig.googleSheetId;
     const sheetName = "Push Notification Subscribers";
 
+    console.log(`📖 Fetching all FCM tokens from sheet: ${sheetName}`);
+    console.log(`📖 Sheet ID: ${spreadsheetId}`);
+
     // Read all tokens from the sheet
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
@@ -115,19 +118,25 @@ async function getAllFCMTokens(): Promise<string[]> {
     });
 
     const rows = response.data.values || [];
+    console.log(`📖 Raw rows from sheet: ${rows.length}`);
+    
     const tokens: string[] = [];
 
-    rows.forEach((row) => {
+    rows.forEach((row, index) => {
       const token = row[0]?.toString().trim();
       if (token && token.length > 50) {
         // FCM tokens are long strings, filter out empty/short values
         tokens.push(token);
+        console.log(`📖 Token ${index + 1}: ${token.substring(0, 30)}... (length: ${token.length})`);
+      } else {
+        console.log(`⚠️  Row ${index + 2} skipped: token too short or empty (length: ${token?.length || 0})`);
       }
     });
 
+    console.log(`✅ Total valid tokens found: ${tokens.length}`);
     return tokens;
   } catch (error) {
-    console.error("Error reading FCM tokens from Google Sheets:", error);
+    console.error("❌ Error reading FCM tokens from Google Sheets:", error);
     return [];
   }
 }
@@ -203,7 +212,10 @@ export async function POST(request: NextRequest) {
 
     if (sendToAll) {
       // Get all tokens from Google Sheets
+      console.log("📤 sendToAll=true, fetching all tokens from sheet...");
       targetTokens = await getAllFCMTokens();
+      
+      console.log(`📤 Total tokens to send: ${targetTokens.length}`);
       
       if (targetTokens.length === 0) {
         return NextResponse.json(
@@ -213,13 +225,17 @@ export async function POST(request: NextRequest) {
       }
     } else if (customTokens && Array.isArray(customTokens)) {
       // Use provided tokens
+      console.log(`📤 Using custom tokens: ${customTokens.length} provided`);
       targetTokens = customTokens.filter((token) => token && token.length > 50);
+      console.log(`📤 Valid custom tokens: ${targetTokens.length}`);
     } else {
       return NextResponse.json(
         { error: "Either sendToAll must be true or tokens array must be provided" },
         { status: 400 }
       );
     }
+
+    console.log(`📤 Starting to send notifications to ${targetTokens.length} tokens...`);
 
     // Send to all tokens
     let successCount = 0;
@@ -230,14 +246,18 @@ export async function POST(request: NextRequest) {
     const batchSize = 100;
     for (let i = 0; i < targetTokens.length; i += batchSize) {
       const batch = targetTokens.slice(i, i + batchSize);
+      console.log(`📤 Processing batch ${Math.floor(i / batchSize) + 1}: ${batch.length} tokens (${i + 1}-${Math.min(i + batchSize, targetTokens.length)} of ${targetTokens.length})`);
       
-      const sendPromises = batch.map(async (token) => {
+      const sendPromises = batch.map(async (token, batchIndex) => {
         const result = await sendFCMNotification(token, title, messageBody);
         if (result.success) {
           successCount++;
+          console.log(`✅ [${i + batchIndex + 1}/${targetTokens.length}] Sent successfully`);
         } else {
           failureCount++;
-          failedTokens.push(`${token.substring(0, 20)}... (${result.error})`);
+          const errorMsg = `${token.substring(0, 20)}... (${result.error})`;
+          failedTokens.push(errorMsg);
+          console.log(`❌ [${i + batchIndex + 1}/${targetTokens.length}] Failed: ${result.error}`);
         }
       });
 
@@ -248,6 +268,8 @@ export async function POST(request: NextRequest) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
+    
+    console.log(`📊 Final results: ${successCount} success, ${failureCount} failed out of ${targetTokens.length} total`);
 
     return NextResponse.json({
       success: successCount > 0,
