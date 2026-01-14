@@ -17,6 +17,7 @@ function PushNotificationSender() {
     successCount?: number;
     failureCount?: number;
     totalTokens?: number;
+    failedTokens?: string[];
   } | null>(null);
 
   // Fetch subscriber count on mount
@@ -70,11 +71,12 @@ function PushNotificationSender() {
 
       if (response.ok) {
         setResult({
-          success: true,
+          success: data.success,
           message: data.message,
           successCount: data.successCount,
           failureCount: data.failureCount,
           totalTokens: data.totalTokens,
+          failedTokens: data.failedTokens,
         });
       } else {
         setResult({
@@ -203,13 +205,21 @@ function PushNotificationSender() {
               {result.success ? "✅ Success!" : "❌ Error"}
             </h3>
             <p className="mb-2">{result.message}</p>
-            {result.success && (
-              <div className="mt-4 text-sm">
-                <p>Successfully sent: {result.successCount}</p>
-                <p>Failed: {result.failureCount}</p>
-                <p>Total tokens: {result.totalTokens}</p>
-              </div>
-            )}
+            <div className="mt-4 text-sm">
+              <p>Successfully sent: {result.successCount || 0}</p>
+              <p>Failed: {result.failureCount || 0}</p>
+              <p>Total tokens: {result.totalTokens || 0}</p>
+              {result.failedTokens && result.failedTokens.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-red-700">
+                  <p className="font-bold text-red-300 mb-2">Error Details:</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    {result.failedTokens.map((failed, index) => (
+                      <li key={index} className="break-all">{failed}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
