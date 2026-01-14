@@ -86,7 +86,29 @@ async function ensureSheetExists() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Handle both JSON and FormData (from sendBeacon) requests
+    let body: any;
+    const contentType = request.headers.get("content-type");
+    
+    if (contentType?.includes("application/json")) {
+      body = await request.json();
+    } else if (contentType?.includes("multipart/form-data")) {
+      // Handle FormData from sendBeacon
+      const formData = await request.formData();
+      const dataString = formData.get("data") as string;
+      body = JSON.parse(dataString);
+    } else {
+      // Fallback: try to parse as JSON
+      try {
+        body = await request.json();
+      } catch {
+        // If that fails, try FormData
+        const formData = await request.formData();
+        const dataString = formData.get("data") as string;
+        body = JSON.parse(dataString);
+      }
+    }
+    
     const { action, permissionGranted } = body;
 
     // Ensure sheet exists

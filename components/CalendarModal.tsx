@@ -21,62 +21,122 @@ export default function CalendarModal({
     // Download PDF immediately - don't wait for anything
     downloadPDF();
     
+    // Track download immediately (don't wait for permission)
+    // Use sendBeacon for more reliable tracking (works even if user navigates away)
+    const trackingData = { 
+      action: "downloaded",
+      permissionGranted: false // Will be updated later if permission is granted
+    };
+    
+    if (navigator.sendBeacon) {
+      // Use sendBeacon with FormData for more reliable tracking
+      const formData = new FormData();
+      formData.append("data", JSON.stringify(trackingData));
+      navigator.sendBeacon("/api/calendar-download", formData);
+    } else {
+      // Fallback to fetch with keepalive
+      fetch("/api/calendar-download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(trackingData),
+        keepalive: true, // Keep request alive even if page unloads
+      }).catch((error) => {
+        console.error("Error tracking download:", error);
+      });
+    }
+    
     // Close modal immediately
     onPermissionHandled();
     
-    // Request push permission in background (completely async, no state updates)
-    // Use setTimeout to ensure it doesn't block anything
+    // Request push permission in background (completely async)
+    // Update tracking with permission status if granted
     setTimeout(() => {
       requestPushPermission()
         .then((permissionGranted) => {
-          // Track download with permission status
-          fetch("/api/calendar-download", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
+          // Update tracking with permission status (optional - download already tracked)
+          if (permissionGranted) {
+            const updateData = { 
               action: "downloaded",
-              permissionGranted 
-            }),
-          }).catch((error) => {
-            console.error("Error tracking download:", error);
-          });
+              permissionGranted: true
+            };
+            
+            if (navigator.sendBeacon) {
+              const formData = new FormData();
+              formData.append("data", JSON.stringify(updateData));
+              navigator.sendBeacon("/api/calendar-download", formData);
+            } else {
+              fetch("/api/calendar-download", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updateData),
+                keepalive: true,
+              }).catch((error) => {
+                console.error("Error updating permission status:", error);
+              });
+            }
+          }
         })
         .catch((error) => {
           console.error("Error requesting permission:", error);
-          // Still track download even if permission fails
-          fetch("/api/calendar-download", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              action: "downloaded",
-              permissionGranted: false
-            }),
-          }).catch((err) => {
-            console.error("Error tracking download:", err);
-          });
         });
     }, 100);
   };
 
   const handleClose = () => {
+    // Track that user closed without downloading immediately
+    // Use sendBeacon for more reliable tracking
+    const trackingData = { 
+      action: "closed_without_download",
+      permissionGranted: false // Will be updated later if permission is granted
+    };
+    
+    if (navigator.sendBeacon) {
+      // Use sendBeacon with FormData for more reliable tracking
+      const formData = new FormData();
+      formData.append("data", JSON.stringify(trackingData));
+      navigator.sendBeacon("/api/calendar-download", formData);
+    } else {
+      // Fallback to fetch with keepalive
+      fetch("/api/calendar-download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(trackingData),
+        keepalive: true, // Keep request alive even if page unloads
+      }).catch((error) => {
+        console.error("Error tracking close:", error);
+      });
+    }
+    
     // Close immediately
     onPermissionHandled();
     
     // Request push permission in background (completely async)
+    // Update tracking with permission status if granted
     setTimeout(() => {
       requestPushPermission()
         .then((permissionGranted) => {
-          // Track that user closed without downloading
-          fetch("/api/calendar-download", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
+          // Update tracking with permission status (optional - close already tracked)
+          if (permissionGranted) {
+            const updateData = { 
               action: "closed_without_download",
-              permissionGranted 
-            }),
-          }).catch((error) => {
-            console.error("Error tracking close:", error);
-          });
+              permissionGranted: true
+            };
+            
+            if (navigator.sendBeacon) {
+              const formData = new FormData();
+              formData.append("data", JSON.stringify(updateData));
+              navigator.sendBeacon("/api/calendar-download", formData);
+            } else {
+              fetch("/api/calendar-download", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updateData),
+                keepalive: true,
+              }).catch((error) => {
+                console.error("Error updating permission status:", error);
+              });
+            }
+          }
         })
         .catch((error) => {
           console.error("Error requesting permission:", error);
