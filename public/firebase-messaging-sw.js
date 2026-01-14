@@ -9,6 +9,9 @@ importScripts("https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-comp
 let firebaseConfig = null;
 let firebaseInitialized = false;
 
+// Flag to track if service worker is ready to show notifications
+let isServiceWorkerReady = false;
+
 // Fetch Firebase config from API and initialize
 async function initializeFirebase() {
   if (firebaseInitialized) return;
@@ -72,30 +75,20 @@ async function setupMessaging() {
   if (firebaseInitialized && firebase.messaging) {
     messaging = firebase.messaging();
     
-    // Handle background messages - only show notifications for actual push messages
+    // Handle background messages - show all push notifications
     messaging.onBackgroundMessage((payload) => {
       console.log("[firebase-messaging-sw.js] Received background message ", payload);
-
-      // Only show notification if service worker is ready and this is a real push message
-      // Don't show notifications during service worker updates
-      if (!isServiceWorkerReady) {
-        console.log("[firebase-messaging-sw.js] Service worker not ready, skipping notification");
-        return;
-      }
 
       const notificationTitle = payload.notification?.title || payload.data?.title || "New Update";
       const notificationBody = payload.notification?.body || payload.data?.body || "";
       
-      // Only show if we have actual notification data (not a service worker update)
-      if (!notificationTitle || notificationTitle.includes("updated") || notificationTitle.includes("update")) {
-        console.log("[firebase-messaging-sw.js] Skipping service worker update notification");
-        return;
-      }
+      // Show all notifications - no filtering
+      console.log("[firebase-messaging-sw.js] Showing notification:", notificationTitle);
       
-      const notificationOptions: any = {
+      const notificationOptions = {
         body: notificationBody,
         // No icon or badge - clean notification
-        tag: "election-update",
+        tag: "election-update-" + Date.now(), // Unique tag to allow multiple notifications
         requireInteraction: false,
         data: payload.data || {},
         vibrate: [200, 100, 200],
@@ -124,29 +117,26 @@ self.addEventListener("message", (event) => {
   }
 });
 
-// Prevent any notifications during service worker lifecycle
-// Only show notifications when we receive actual push messages
-let isServiceWorkerReady = false;
-
-// Setup messaging when service worker activates (silently)
+// Setup messaging when service worker activates
 self.addEventListener("activate", (event) => {
+  console.log("[firebase-messaging-sw.js] Service worker activating...");
   // Take control of all pages immediately (skip waiting)
   event.waitUntil(
     Promise.all([
       self.clients.claim(), // Take control immediately
       setupMessaging().then(() => {
         isServiceWorkerReady = true;
+        console.log("[firebase-messaging-sw.js] Service worker ready!");
       }),
     ])
   );
 });
 
-// Setup messaging if already activated (but don't show notifications yet)
-if (self.registration && self.registration.active) {
-  setupMessaging().then(() => {
-    isServiceWorkerReady = true;
-  });
-}
+// Setup messaging immediately if already activated
+setupMessaging().then(() => {
+  isServiceWorkerReady = true;
+  console.log("[firebase-messaging-sw.js] Messaging setup on load");
+});
 
 // Handle notification clicks
 self.addEventListener("notificationclick", (event) => {
