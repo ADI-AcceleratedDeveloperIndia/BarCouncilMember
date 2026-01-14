@@ -42,6 +42,9 @@ export async function GET() {
     const spreadsheetId = candidateConfig.googleSheetId;
     const sheetName = "Push Notification Subscribers";
 
+    console.log("📊 Getting subscriber count from sheet:", sheetName);
+    console.log("📊 Sheet ID:", spreadsheetId);
+
     // Read all tokens from the sheet
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
@@ -49,19 +52,35 @@ export async function GET() {
     });
 
     const rows = response.data.values || [];
+    console.log("📊 Rows found:", rows.length);
+    
     let count = 0;
 
-    rows.forEach((row) => {
+    rows.forEach((row, index) => {
       const token = row[0]?.toString().trim();
+      console.log(`📊 Row ${index + 2}: token length = ${token?.length || 0}`);
       if (token && token.length > 50) {
         // FCM tokens are long strings, filter out empty/short values
         count++;
       }
     });
 
-    return NextResponse.json({ count });
-  } catch (error) {
-    console.error("Error getting subscriber count:", error);
-    return NextResponse.json({ count: 0, error: "Failed to get count" });
+    console.log("📊 Final count:", count);
+    
+    return NextResponse.json({ 
+      count,
+      debug: {
+        sheetName,
+        rowsFound: rows.length,
+        sheetId: spreadsheetId
+      }
+    });
+  } catch (error: any) {
+    console.error("❌ Error getting subscriber count:", error);
+    return NextResponse.json({ 
+      count: 0, 
+      error: error.message || "Failed to get count",
+      sheetId: candidateConfig.googleSheetId
+    });
   }
 }
