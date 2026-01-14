@@ -13,25 +13,37 @@ export default function ServiceWorkerRegistration() {
         .then((registration) => {
           console.log("Service Worker registered:", registration);
 
-          // Handle service worker updates silently
+          // Handle service worker updates silently - no notifications
           registration.addEventListener("updatefound", () => {
             const newWorker = registration.installing;
             if (newWorker) {
               newWorker.addEventListener("statechange", () => {
-                if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                if (newWorker.state === "installed") {
                   // New service worker is ready, activate it silently
-                  newWorker.postMessage({ type: "SKIP_WAITING" });
-                  // Reload page to use new service worker (optional - can be removed if you want silent updates)
-                  // window.location.reload();
+                  if (navigator.serviceWorker.controller) {
+                    // There's an old service worker, activate new one silently
+                    newWorker.postMessage({ type: "SKIP_WAITING" });
+                    // Don't reload - let it activate silently in background
+                  } else {
+                    // First time installation - no action needed
+                    console.log("Service Worker installed for the first time");
+                  }
                 }
               });
             }
           });
 
-          // Check for updates periodically (every hour)
-          setInterval(() => {
-            registration.update();
-          }, 60 * 60 * 1000);
+          // Listen for controller change (when new service worker takes control)
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            // Service worker updated silently - no notification needed
+            console.log("Service Worker updated silently");
+          });
+
+          // Check for updates less frequently to reduce update notifications
+          // Only check on page load, not periodically
+          // setInterval(() => {
+          //   registration.update();
+          // }, 60 * 60 * 1000);
         })
         .catch((error) => {
           console.error("Service Worker registration failed:", error);

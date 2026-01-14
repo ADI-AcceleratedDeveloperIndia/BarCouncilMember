@@ -72,12 +72,25 @@ async function setupMessaging() {
   if (firebaseInitialized && firebase.messaging) {
     messaging = firebase.messaging();
     
-    // Handle background messages
+    // Handle background messages - only show notifications for actual push messages
     messaging.onBackgroundMessage((payload) => {
       console.log("[firebase-messaging-sw.js] Received background message ", payload);
 
+      // Only show notification if service worker is ready and this is a real push message
+      // Don't show notifications during service worker updates
+      if (!isServiceWorkerReady) {
+        console.log("[firebase-messaging-sw.js] Service worker not ready, skipping notification");
+        return;
+      }
+
       const notificationTitle = payload.notification?.title || payload.data?.title || "New Update";
       const notificationBody = payload.notification?.body || payload.data?.body || "";
+      
+      // Only show if we have actual notification data (not a service worker update)
+      if (!notificationTitle || notificationTitle.includes("updated") || notificationTitle.includes("update")) {
+        console.log("[firebase-messaging-sw.js] Skipping service worker update notification");
+        return;
+      }
       
       const notificationOptions: any = {
         body: notificationBody,
@@ -96,21 +109,12 @@ async function setupMessaging() {
   }
 }
 
-// Setup messaging when service worker activates
-self.addEventListener("activate", (event) => {
-  // Take control of all pages immediately (skip waiting)
-  event.waitUntil(
-    Promise.all([
-      self.clients.claim(), // Take control immediately
-      setupMessaging(),
-    ])
-  );
-});
+// (Moved to bottom to prevent duplicate activation handler)
 
 // Handle service worker updates silently (prevent "website updated" notification)
 self.addEventListener("install", (event) => {
-  // Skip waiting - activate new service worker immediately
-  self.skipWaiting();
+  // Skip waiting - activate new service worker immediately without showing notification
+  event.waitUntil(self.skipWaiting());
 });
 
 // Listen for skip waiting message from main thread
@@ -120,8 +124,29 @@ self.addEventListener("message", (event) => {
   }
 });
 
-// Also setup immediately if already activated
-setupMessaging();
+// Prevent any notifications during service worker lifecycle
+// Only show notifications when we receive actual push messages
+let isServiceWorkerReady = false;
+
+// Setup messaging when service worker activates (silently)
+self.addEventListener("activate", (event) => {
+  // Take control of all pages immediately (skip waiting)
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(), // Take control immediately
+      setupMessaging().then(() => {
+        isServiceWorkerReady = true;
+      }),
+    ])
+  );
+});
+
+// Setup messaging if already activated (but don't show notifications yet)
+if (self.registration && self.registration.active) {
+  setupMessaging().then(() => {
+    isServiceWorkerReady = true;
+  });
+}
 
 // Handle notification clicks
 self.addEventListener("notificationclick", (event) => {
