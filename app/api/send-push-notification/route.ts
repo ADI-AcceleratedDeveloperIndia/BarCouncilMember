@@ -119,11 +119,13 @@ async function getAllFCMTokens(): Promise<string[]> {
   }
 }
 
-async function sendFCMNotification(token: string, title: string, body: string): Promise<boolean> {
+async function sendFCMNotification(token: string, title: string, body: string): Promise<{ success: boolean; error?: string }> {
   try {
     if (!firebaseAdminInitialized || !admin.apps.length) {
-      throw new Error("Firebase Admin SDK not initialized. Please add FIREBASE_SERVICE_ACCOUNT to environment variables.");
+      return { success: false, error: "Firebase Admin SDK not initialized" };
     }
+
+    console.log(`📤 Sending notification to token: ${token.substring(0, 20)}...`);
 
     // Use Firebase Admin SDK to send notification
     const message: any = {
@@ -136,7 +138,6 @@ async function sendFCMNotification(token: string, title: string, body: string): 
         notification: {
           title: title,
           body: body,
-          // No icon or badge - clean notification
         },
         fcmOptions: {
           link: "/",
@@ -146,18 +147,20 @@ async function sendFCMNotification(token: string, title: string, body: string): 
 
     const response = await admin.messaging().send(message);
     
-    console.log("Successfully sent message:", response);
-    return true;
+    console.log("✅ Successfully sent message:", response);
+    return { success: true };
   } catch (error: any) {
-    console.error(`Error sending FCM notification to token:`, error.message);
+    console.error(`❌ Error sending FCM notification:`, error.message);
+    console.error(`   Error code: ${error.code}`);
+    console.error(`   Token: ${token.substring(0, 30)}...`);
     
     // Check if token is invalid/expired
     if (error.code === "messaging/invalid-registration-token" || 
         error.code === "messaging/registration-token-not-registered") {
-      console.log("Token is invalid or expired, should be removed from database");
+      return { success: false, error: "Token invalid or expired" };
     }
     
-    return false;
+    return { success: false, error: error.message || "Unknown error" };
   }
 }
 
@@ -216,12 +219,12 @@ export async function POST(request: NextRequest) {
       const batch = targetTokens.slice(i, i + batchSize);
       
       const sendPromises = batch.map(async (token) => {
-        const success = await sendFCMNotification(token, title, messageBody);
-        if (success) {
+        const result = await sendFCMNotification(token, title, messageBody);
+        if (result.success) {
           successCount++;
         } else {
           failureCount++;
-          failedTokens.push(token);
+          failedTokens.push(`${token.substring(0, 20)}... (${result.error})`);
         }
       });
 
@@ -234,12 +237,14 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      success: true,
-      message: `Sent ${successCount} notifications successfully`,
+      success: successCount > 0,
+      message: successCount > 0 
+        ? `Sent ${successCount} notifications successfully` 
+        : `Failed to send all ${failureCount} notifications`,
       successCount,
       failureCount,
       totalTokens: targetTokens.length,
-      failedTokens: failedTokens.length > 0 ? failedTokens.slice(0, 10) : undefined, // Return first 10 failed tokens
+      failedTokens: failedTokens.length > 0 ? failedTokens.slice(0, 10) : undefined, // Return first 10 failed tokens with error reasons
     });
   } catch (error: any) {
     console.error("Error sending push notification:", error);
