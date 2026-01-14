@@ -5,7 +5,7 @@ import { candidateConfig } from "@/config/candidate.config";
 import AdminProtection from "@/components/AdminProtection";
 
 function PushNotificationSender() {
-  const [title, setTitle] = useState("Important Bar Council Update");
+  const [title, setTitle] = useState("Important Bar Council News");
   const [message, setMessage] = useState("Sl.No.15 Ashok Goud Ponnam - write ONE");
   const [sendToAll, setSendToAll] = useState(true);
   const [customTokens, setCustomTokens] = useState("");
