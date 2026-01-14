@@ -137,8 +137,7 @@ async function subscribeToPushNotifications(): Promise<void> {
         if (Notification.permission === "granted") {
           new Notification(payload.notification?.title || "New Update", {
             body: payload.notification?.body || "",
-            icon: payload.notification?.icon || "/A-logo.png",
-            badge: "/A-logo.png",
+            // No icon or badge - clean notification
           });
         }
       });

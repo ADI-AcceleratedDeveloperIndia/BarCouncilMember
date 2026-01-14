@@ -139,8 +139,7 @@ async function sendFCMNotification(token: string, title: string, body: string, v
         notification: {
           title: title,
           body: body,
-          icon: "/A-logo.png",
-          badge: "/A-logo.png",
+          // No icon or badge - clean notification
         },
         fcmOptions: {
           link: link,

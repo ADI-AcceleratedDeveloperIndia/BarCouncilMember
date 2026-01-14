@@ -78,12 +78,10 @@ async function setupMessaging() {
 
       const notificationTitle = payload.notification?.title || payload.data?.title || "New Update";
       const notificationBody = payload.notification?.body || payload.data?.body || "";
-      const notificationIcon = payload.notification?.icon || payload.data?.icon || "/A-logo.png";
       
-      const notificationOptions = {
+      const notificationOptions: any = {
         body: notificationBody,
-        icon: notificationIcon,
-        badge: "/A-logo.png",
+        // No icon or badge - clean notification
         tag: "election-update",
         requireInteraction: false,
         data: payload.data || {},
