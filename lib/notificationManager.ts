@@ -120,6 +120,9 @@ async function subscribeToPushNotifications(): Promise<void> {
           console.error("Sheet ID:", errorData.sheetId);
           
           // Log error (don't show alert - this runs in background)
+          const fullErrorMessage = errorDetails 
+            ? `${errorMessage}\n\n${errorDetails}`
+            : errorMessage;
           console.error("Failed to save notification subscription:", fullErrorMessage);
         }
       } catch (error) {
@@ -155,12 +158,25 @@ export function downloadPDF(): void {
   }
 
   const pdfUrl = "/calendar2026.pdf";
-  const link = document.createElement("a");
-  link.href = pdfUrl;
-  link.download = "2026-Court-Calendar.pdf";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  
+  // Try direct download first (works on desktop)
+  try {
+    const link = document.createElement("a");
+    link.href = pdfUrl;
+    link.download = "2026-Court-Calendar.pdf";
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up after a short delay
+    setTimeout(() => {
+      document.body.removeChild(link);
+    }, 100);
+  } catch (error) {
+    console.error("Error downloading PDF:", error);
+    // Fallback: open in new tab (works on mobile)
+    window.open(pdfUrl, "_blank");
+  }
 }
 
 /**

@@ -15,80 +15,73 @@ export default function CalendarModal({
   onClose,
   onPermissionHandled,
 }: CalendarModalProps) {
-  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   const [modalLanguage, setModalLanguage] = useState<Language>(language);
 
-  const handleDownload = async () => {
-    // Download PDF immediately (don't wait for permission)
+  const handleDownload = () => {
+    // Download PDF immediately - don't wait for anything
     downloadPDF();
     
-    // Track download event (non-blocking)
-    fetch("/api/calendar-download", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        action: "downloaded",
-        permissionGranted: false // Will be updated after permission check
-      }),
-    }).catch((error) => {
-      console.error("Error tracking download:", error);
-    });
-    
-    // Request push permission in background (non-blocking)
-    setIsRequestingPermission(true);
-    requestPushPermission()
-      .then((permissionGranted) => {
-        // Update tracking with actual permission status
-        fetch("/api/calendar-download", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            action: "downloaded",
-            permissionGranted 
-          }),
-        }).catch((error) => {
-          console.error("Error updating permission status:", error);
-        });
-      })
-      .catch((error) => {
-        console.error("Error requesting permission:", error);
-      })
-      .finally(() => {
-        setIsRequestingPermission(false);
-      });
-    
-    // Close modal immediately after download starts
-    setTimeout(() => {
-      onPermissionHandled();
-    }, 300);
-  };
-
-  const handleClose = async () => {
-    // Close immediately, request permission in background
+    // Close modal immediately
     onPermissionHandled();
     
-    // Request push permission in background (non-blocking)
-    setIsRequestingPermission(true);
-    requestPushPermission()
-      .then((permissionGranted) => {
-        // Track that user closed without downloading
-        fetch("/api/calendar-download", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            action: "closed_without_download",
-            permissionGranted 
-          }),
-        }).catch((error) => {
-          console.error("Error tracking close:", error);
+    // Request push permission in background (completely async, no state updates)
+    // Use setTimeout to ensure it doesn't block anything
+    setTimeout(() => {
+      requestPushPermission()
+        .then((permissionGranted) => {
+          // Track download with permission status
+          fetch("/api/calendar-download", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              action: "downloaded",
+              permissionGranted 
+            }),
+          }).catch((error) => {
+            console.error("Error tracking download:", error);
+          });
+        })
+        .catch((error) => {
+          console.error("Error requesting permission:", error);
+          // Still track download even if permission fails
+          fetch("/api/calendar-download", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              action: "downloaded",
+              permissionGranted: false
+            }),
+          }).catch((err) => {
+            console.error("Error tracking download:", err);
+          });
         });
-      })
-      .catch((error) => {
-        console.error("Error requesting permission:", error);
-      })
-      .finally(() => {
-        setIsRequestingPermission(false);
-      });
+    }, 100);
+  };
+
+  const handleClose = () => {
+    // Close immediately
+    onPermissionHandled();
+    
+    // Request push permission in background (completely async)
+    setTimeout(() => {
+      requestPushPermission()
+        .then((permissionGranted) => {
+          // Track that user closed without downloading
+          fetch("/api/calendar-download", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              action: "closed_without_download",
+              permissionGranted 
+            }),
+          }).catch((error) => {
+            console.error("Error tracking close:", error);
+          });
+        })
+        .catch((error) => {
+          console.error("Error requesting permission:", error);
+        });
+    }, 100);
   };
 
   const content = {
@@ -116,8 +109,7 @@ export default function CalendarModal({
         {/* Close Button */}
         <button
           onClick={handleClose}
-          disabled={isRequestingPermission}
-          className="absolute top-2 right-2 sm:top-4 sm:right-4 text-gold hover:text-yellow-400 text-3xl sm:text-4xl font-bold transition-colors w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center touch-manipulation disabled:opacity-50"
+          className="absolute top-2 right-2 sm:top-4 sm:right-4 text-gold hover:text-yellow-400 text-3xl sm:text-4xl font-bold transition-colors w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center touch-manipulation"
           aria-label={t.closeButton}
         >
           ×
