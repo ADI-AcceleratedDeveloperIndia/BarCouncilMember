@@ -16,8 +16,18 @@ const firebaseConfig = {
 
 // Initialize Firebase (only once)
 let app: FirebaseApp | undefined;
-if (typeof window !== "undefined" && getApps().length === 0) {
-  app = initializeApp(firebaseConfig);
+if (typeof window !== "undefined") {
+  if (getApps().length === 0) {
+    try {
+      app = initializeApp(firebaseConfig);
+      console.log("✅ Firebase initialized successfully");
+    } catch (error) {
+      console.error("❌ Failed to initialize Firebase:", error);
+    }
+  } else {
+    app = getApps()[0];
+    console.log("✅ Using existing Firebase app");
+  }
 }
 
 // VAPID key from config
@@ -79,15 +89,33 @@ export async function requestPushPermission(): Promise<boolean> {
  * Subscribe to push notifications using Firebase Cloud Messaging
  */
 async function subscribeToPushNotifications(): Promise<void> {
-  if (typeof window === "undefined" || !app) {
+  console.log("📱 Starting push notification subscription...");
+  
+  if (typeof window === "undefined") {
+    console.error("❌ Window is undefined");
     return;
+  }
+  
+  if (!app) {
+    console.error("❌ Firebase app is not initialized");
+    // Try to initialize again
+    if (getApps().length > 0) {
+      app = getApps()[0];
+      console.log("✅ Retrieved existing Firebase app");
+    } else {
+      console.error("❌ No Firebase apps available");
+      return;
+    }
   }
 
   try {
+    console.log("⏳ Waiting for service worker...");
     // Register service worker
     const registration = await navigator.serviceWorker.ready;
+    console.log("✅ Service worker ready");
     
     // Get FCM token
+    console.log("⏳ Getting FCM token...");
     const messaging = getMessaging(app);
     const token = await getToken(messaging, {
       vapidKey: vapidKey,
@@ -95,12 +123,13 @@ async function subscribeToPushNotifications(): Promise<void> {
     });
 
     if (token) {
-      console.log("FCM Token:", token);
+      console.log("✅ FCM Token obtained:", token.substring(0, 30) + "...");
       
       // Save token to localStorage
       localStorage.setItem("fcmToken", token);
       
       // Send token to server (required - for server-side notifications)
+      console.log("⏳ Saving FCM token to server...");
       try {
         const response = await fetch("/api/save-fcm-token", {
           method: "POST",
@@ -109,43 +138,36 @@ async function subscribeToPushNotifications(): Promise<void> {
         });
         
         if (response.ok) {
-          console.log("✅ FCM token saved to Google Sheets successfully");
+          const data = await response.json();
+          console.log("✅ FCM token saved to Google Sheets successfully!", data);
         } else {
           const errorData = await response.json().catch(() => ({}));
           const errorMessage = errorData.error || errorData.details || response.statusText;
-          const errorDetails = errorData.details || "";
           console.error("❌ Failed to save FCM token:", errorMessage);
           console.error("Full error response:", errorData);
-          console.error("Service Account Email:", errorData.serviceAccountEmail);
-          console.error("Sheet ID:", errorData.sheetId);
-          
-          // Log error (don't show alert - this runs in background)
-          const fullErrorMessage = errorDetails 
-            ? `${errorMessage}\n\n${errorDetails}`
-            : errorMessage;
-          console.error("Failed to save notification subscription:", fullErrorMessage);
         }
       } catch (error) {
-        console.error("❌ Error saving FCM token:", error);
+        console.error("❌ Network error saving FCM token:", error);
       }
 
       // Listen for foreground messages
       onMessage(messaging, (payload) => {
-        console.log("Message received:", payload);
+        console.log("📨 Message received:", payload);
         
         // Show notification even when app is in foreground
         if (Notification.permission === "granted") {
           new Notification(payload.notification?.title || "New Update", {
             body: payload.notification?.body || "",
-            // No icon or badge - clean notification
           });
         }
       });
     } else {
-      console.warn("No FCM token available");
+      console.warn("⚠️ No FCM token available - this usually means VAPID key is wrong or service worker issue");
     }
-  } catch (error) {
-    console.error("Error subscribing to push notifications:", error);
+  } catch (error: any) {
+    console.error("❌ Error subscribing to push notifications:", error);
+    console.error("   Error message:", error.message);
+    console.error("   Error code:", error.code);
   }
 }
 
