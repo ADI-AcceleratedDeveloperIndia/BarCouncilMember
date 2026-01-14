@@ -111,10 +111,10 @@ async function getAllFCMTokens(): Promise<string[]> {
     console.log(`📖 Fetching all FCM tokens from sheet: ${sheetName}`);
     console.log(`📖 Sheet ID: ${spreadsheetId}`);
 
-    // Read all tokens from the sheet
+    // Read all tokens from the sheet (read up to 10,000 rows to ensure we get all tokens)
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${sheetName}!B2:B`, // Column B (FCM Token), starting from row 2
+      range: `${sheetName}!B2:B10000`, // Column B (FCM Token), starting from row 2, up to row 10000
     });
 
     const rows = response.data.values || [];
